@@ -40,6 +40,40 @@ int genmoves_sheep(state st, state *res) {
   return moves;
 }
 
+int blocked_tigers(state st) {
+  int blocked = 0;
+  
+  // there has to be a tiger to move
+  for (int i = 0; i < BOARDPLACES; i++) {
+    if ((1ULL << i) & st.tiger) {
+      int isblocked = 1;
+      for (int p = 0; p < 8; p++) {
+	// there has to be a connection
+	if (CONNECTIONS[i] & (1u << p)) {
+	  // the target has to be tigerfree
+	  int newplace = (i + BOARDPLACES + SHIFT[p]) % BOARDPLACES;
+
+	  if (! ((1ULL << newplace) & (st.tiger | st.sheep))) {
+	    isblocked = 0;
+	  } else if ((1ULL << newplace) & st.sheep) {
+	    // if there is a sheep, it may be possible to jump
+	    if (CONNECTIONS[newplace] & (1u << p)) { // jumps are straigh on in the same direction
+	      int jumpplace = (newplace + BOARDPLACES + SHIFT[p]) % BOARDPLACES;
+	      if (! ((1ULL << jumpplace) & (st.tiger | st.sheep))) { // the jumpplace has to be empty
+		isblocked = 0;
+	      }
+	    }
+	  }
+	}
+      }
+      if (isblocked)
+	blocked++;
+    }
+  }
+
+  return blocked;
+}
+
 int genmoves_tiger(state st, state *res) {
   int moves = 0;
   
@@ -161,43 +195,35 @@ void write_board(state st, FILE *to) {
   }
 }
 
-int ai_move_sheep(state *states, int n, int *score, int depth);
-int ai_move_tiger(state *states, int n, int *score, int depth) {
-  if (depth == 0) {
-    return n;
-  } else {
-    int best = 0;
-    *score = 0;
-    state *nstates = (state *) malloc(sizeof(state) * 64);
-    for (int i = 0; i < n; i++) {
-      int tmp;
-      int k = genmoves(states[i], nstates);
-      ai_move_sheep(nstates, k, &tmp, depth - 1);
-      if (tmp > *score) {
-	*score = tmp;
-	best = i;
+int ai_move_rec(state *states, int n, int *score, int depth, int tiger) {
+  if (depth == 0 || n == 0) {
+    // fprintf(stderr, "SHEEP %d\n", hamming(states[0].sheep));
+    if (n == 0) {
+      if (tiger)
+	*score = MAXSCORE;
+      else
+	*score = 0;
+    } else {
+      int blocked = blocked_tigers(states[0]);
+      if (blocked == 4) {
+	*score = MAXSCORE; // for winning we may loose a sheep
+      } else {
+	*score = SHEEPWEIGHT * hamming(states[0].sheep) + TRAPPEDWEIGHT * blocked;
       }
     }
-    free(nstates);
-    return best;
-  }
-}
-
-int ai_move_sheep(state *states, int n, int *score, int depth) {
-  if (depth == 0) {
-    if (n == 0)
-      return 0;
-    else
-      return hamming(states[0].sheep);
+    return 0;
   } else {
     int best = 0;
-    *score = 0;
+    if (tiger)
+      *score = MAXSCORE;
+    else
+      *score = 0;
     state *nstates = (state *) malloc(sizeof(state) * 64);
     for (int i = 0; i < n; i++) {
       int tmp;
       int k = genmoves(states[i], nstates);
-      ai_move_tiger(nstates, k, &tmp, depth - 1);
-      if (tmp > *score) {
+      ai_move_rec(nstates, k, &tmp, depth - 1, !tiger);
+      if ((!tiger && tmp > *score) || (tiger && tmp < *score)) {
 	*score = tmp;
 	best = i;
       }
@@ -214,14 +240,8 @@ state ai_move(state st, int depth) {
   state *states = (state *) malloc(sizeof(state) * 64);
   int n = genmoves(st, states);
   int score;
-  int (*ai_move_)(state *, int, int*, int);
 
-  if (st.turn == TURN_SHEEP)
-    ai_move_ = ai_move_sheep;
-  else if (st.turn == TURN_TIGER)
-    ai_move_ = ai_move_tiger;
-
-  int best = ai_move_(states, n, &score, depth);
+  int best = ai_move_rec(states, n, &score, depth, st.turn == TURN_TIGER);
   state res = states[best];
   free(states);
   return res;
@@ -258,16 +278,46 @@ static void undo_move() {
   }
 }
 
-void gameloop(FILE *in, FILE *out, int verb, int ait, int ais) {
+void gameloop(FILE *in, FILE *out, int verb, int cm, int ait, int ais) {
   while (1) {
   TOP:
      assert((game[turn-1].sheep & game[turn-1].tiger) == 0);
 
+     // check for win situation
+     if (game[turn-1].turn == TURN_TIGER) {
+       if (blocked_tigers(game[turn-1]) == 4) {
+	 fputs("Sheep win!\n", out);
+
+	 // for debugging tkchal
+	 fputs("Sheep win!\n", stderr);
+	 return;
+       }
+     } else {
+       if (hamming(game[turn-1].sheep) <= 15 && game[turn-1].setsheep == MAXSHEEP) {
+	 fputs("Tigers win!\n", out);
+
+	 // for debugging tkchal
+	 fputs("Tigers win!\n", stderr);
+	 return;
+       }
+     }
+
      if (game[turn-1].turn == TURN_SHEEP && ais) {
-       apply_move(ai_move(game[turn-1], 4));
+       int depth = 6;
+       if (cm) {
+	 write_turn(game[turn-1], out);
+	 write_board(game[turn-1], out);
+       }
+
+       apply_move(ai_move(game[turn-1], depth));
      }
      else if (game[turn-1].turn == TURN_TIGER && ait) {
-       apply_move(ai_move(game[turn-1], 4));
+       if (cm) {
+	 write_turn(game[turn-1], out);
+	 write_board(game[turn-1], out);
+       }
+
+       apply_move(ai_move(game[turn-1], 6));
      }
      else {
        if (verb) {
@@ -344,7 +394,7 @@ void gameloop(FILE *in, FILE *out, int verb, int ait, int ais) {
 }
 
 void usage() {
-  fputs("usage: bhagchal [-vhts]\n", stdout);
+  fputs("usage: bhagchal [-vhtsa]\n", stdout);
 }
 
 void help() {
@@ -357,13 +407,15 @@ void help() {
   "Options:\n"
   "-v    -- print out boards more human readable\n"
   "-s/-t -- sheep/tiger are played by computer\n"
+  "-a    -- print the board when the computer has moved as well\n"
   "-h    -- print this help and exit\n", stdout);
 }
 
 int main(int argc, char *argv[]) {
   int verbose = 0,
     ait = 0,
-    ais = 0;
+    ais = 0,
+    cm = 0;
 
   for (int i = 1; i < argc; i++) {
     if (argv[i][0] == '-') {
@@ -375,6 +427,9 @@ int main(int argc, char *argv[]) {
 	  break;
 	case 'v':
 	  verbose = 1;
+	  break;
+	case 'a':
+	  cm = 1;
 	  break;
 	case 't':
 	  ait = 1;
@@ -401,6 +456,6 @@ int main(int argc, char *argv[]) {
   game = (state *) malloc(sizeof(state) * cap);
   game[0] = START;
 
-  gameloop(stdin, stdout, verbose, ait, ais);
+  gameloop(stdin, stdout, verbose, cm, ait, ais);
   return 0;
 }

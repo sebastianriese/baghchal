@@ -251,6 +251,18 @@ class Game:
         cur = 'u\n'
         while True:
             tmp = str(self.game.stdout.readline(), encoding='US-ASCII')
+            if tmp.strip() == 'Tigers win!':
+                self.game.wait()
+                self.status.text = 'Tigers win!'
+                self.game = None
+                return
+
+            elif tmp.strip() == 'Sheep win!':
+                self.game.wait()
+                self.status.text = 'Sheep win!'
+                self.game = None
+                return
+
             if state == 'skip':
                 if tmp.strip() == '#0':
                     state = 'reading'
@@ -267,7 +279,7 @@ class Game:
                     cur += tmp
 
     def new(self):
-        self.game = subprocess.Popen([BHAGCHAL], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        self.game = subprocess.Popen([BHAGCHAL, '-t'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=None)
         self.get_board()
         self.get_moves()
         self.draw()

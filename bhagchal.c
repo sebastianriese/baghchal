@@ -161,45 +161,48 @@ void write_board(state st, FILE *to) {
   }
 }
 
-int ai_move_rec(state *states, int n, int *sheepscore, int *tigerscore, int depth) {
+int ai_move_sheep(state *states, int n, int *score, int depth);
+int ai_move_tiger(state *states, int n, int *score, int depth) {
   if (depth == 0) {
-    // now comes the scoring
-    *sheepscore = 0;
-    *tigerscore = 0;
-    int index = 0;
-    for (int i = 0; i < n; i++) {
-      // additionally we should give bonus for trapped tigers
-      if (states[i].turn == TURN_SHEEP) {
-	int tmp = hamming(states[i].sheep);
-	if (tmp > *sheepscore) {
-	  index = i;
-	  *sheepscore = tmp;
-	}
-      } else {
-	// rate movability and number of eaten sheep
-	int tmp = MAXSHEEP - hamming(states[i].sheep) + n / 2;
-	if (tmp > *tigerscore) {
-	  index = i;
-	  *tigerscore = tmp;
-	}
-      }
-    }
-    return index;
+    return n;
   } else {
-    state *mystates = (state *) malloc(sizeof(state) * 64);
     int best = 0;
-    int *score = NULL;
-
+    *score = 0;
+    state *nstates = (state *) malloc(sizeof(state) * 64);
     for (int i = 0; i < n; i++) {
-      int myn = genmoves(states[i], mystates);
-      int myscore;
-      ai_move_rec(mystates, myn, &myscore, &myscore, depth - 1);
-      if (myscore > *score) {
+      int tmp;
+      int k = genmoves(states[i], nstates);
+      ai_move_sheep(nstates, k, &tmp, depth - 1);
+      if (tmp > *score) {
+	*score = tmp;
 	best = i;
-	*sheepscore = myscore;
       }
     }
-    free(mystates);
+    free(nstates);
+    return best;
+  }
+}
+
+int ai_move_sheep(state *states, int n, int *score, int depth) {
+  if (depth == 0) {
+    if (n == 0)
+      return 0;
+    else
+      return hamming(states[0].sheep);
+  } else {
+    int best = 0;
+    *score = 0;
+    state *nstates = (state *) malloc(sizeof(state) * 64);
+    for (int i = 0; i < n; i++) {
+      int tmp;
+      int k = genmoves(states[i], nstates);
+      ai_move_tiger(nstates, k, &tmp, depth - 1);
+      if (tmp > *score) {
+	*score = tmp;
+	best = i;
+      }
+    }
+    free(nstates);
     return best;
   }
 }
@@ -210,8 +213,15 @@ state ai_move(state st, int depth) {
   // wait isn't that exactly what obstacks do ... portability?
   state *states = (state *) malloc(sizeof(state) * 64);
   int n = genmoves(st, states);
-  int sscore, tscore;
-  int best = ai_move_rec(states, n, &sscore, &tscore, depth);
+  int score;
+  int (*ai_move_)(state *, int, int*, int);
+
+  if (st.turn == TURN_SHEEP)
+    ai_move_ = ai_move_sheep;
+  else if (st.turn == TURN_TIGER)
+    ai_move_ = ai_move_tiger;
+
+  int best = ai_move_(states, n, &score, depth);
   state res = states[best];
   free(states);
   return res;
@@ -391,6 +401,6 @@ int main(int argc, char *argv[]) {
   game = (state *) malloc(sizeof(state) * cap);
   game[0] = START;
 
-  gameloop(stdin, stdout, verbose, ais, ait);
+  gameloop(stdin, stdout, verbose, ait, ais);
   return 0;
 }

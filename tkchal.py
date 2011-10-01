@@ -267,7 +267,7 @@ class Game:
                     cur += tmp
 
     def new(self):
-        self.game = subprocess.Popen(BHAGCHAL, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        self.game = subprocess.Popen([BHAGCHAL], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         self.get_board()
         self.get_moves()
         self.draw()

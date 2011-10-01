@@ -1,0 +1,89 @@
+bhagchal 0.1
+An implementation of the bhag chal board game
+
+Author: Sebastian Riese <sebastian.riese.mail@web.de>
+
+usage: bhagchal [-astvh]
+
+RULES
+-----
+
+The Board in its initial configuration is shown in Fig. 1. o denotes
+an empty place, |, \, / and --- denote connections between the fields.
+
+The two parties use different pieces: One of them playes the wolves or
+tigers (T) the other plays sheep or goats (or whatever, S). The
+parties move alternating.
+
+The tigers have to movement possibilities: either along one of the
+lines to an empty field, or jumping straight over a field occupied by
+a sheep to an empty field. The sheep on the field inbetween is removed
+from the game (eaten).
+
+The moves of the sheep occur in two phases: As you can see there are
+no sheep on the board initially, so first all 20 sheep are set, one
+each turn, to the free board places. When all 20 sheep are set (when a
+sheep is eaten it is not added back to that pool), sheep can move like
+tigers, except they can not jump tigers or sheep.
+
+The sheep win, when the tigers can not move any longer, the tigers win
+when they ate 5 sheep.
+
+The traditional implementation of the game is a piece of paper, on
+which the board is written with a pen, twenty small (sheep) stones and
+four larger ones (tigers).
+
+T---o---o---o---T
+| \ | / | \ | / |
+o---o---o---o---o
+| / | \ | / | \ |
+o---o---o---o---o
+| \ | / | \ | / |
+o---o---o---o---o
+| / | \ | / | \ |
+T---o---o---o---T
+Fig 1: Bhag Chal board in initial configuration
+
+THIS IMPLEMENTATION
+-------------------
+
+The major feature this implementation gains in comparison to the
+pen-and-paper-and-stones variant is the availability of computer
+adversaries, making it possible to play the game all alone.
+
+With the -t/-s option you activate the AI for tigers/sheep. It is
+possible to let the AI play itself (-st). To do so, you should also
+give the -a option to see the board after each turn (it is usually not
+displayed).
+
+The playing interface in the commandline is currently not nice: though
+with the -v option the board is beautifully ascii-arted to your screen
+the turns are done by examining the numbered boards resulting from
+possible moves and enter the number of the move you want to make.
+
+In the game commandline the command u undoes the previous move, h
+prints help (currently nothing) and q exits.
+
+For more comfort while playing the Python/Tk frontend is strongly
+recommended. It is invoked as tkchal.py and should be sufficiently
+intuitive (except that the turns done by AI are shown immediately
+after your turn, without showing the configuration after your turn).
+
+TODO
+----
+
+-Make AI faster in the beginning of the game, and use the fact, that
+ in later game the search tree is smaller and therefore the search can
+ be deeper (one may even search exhaustively for a winning turn from a
+ certain point).
+
+-A nicer user interface and a user interface and a cleaner interface
+ for programs to avoid states, which freeze the client. The nicest
+ thing would be a query/answer system.
+
+-Better memory management, perhaps randomization of indifferent turns.
+ This would make a game against the AI more interesting.
+
+-Think about ways to speedup the turn generator and remove the code
+ duplication in the functions genmoves_sheep, genmoves_tiger and
+ blocked_tigers

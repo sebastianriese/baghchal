@@ -83,7 +83,22 @@ TODO
 -Perhaps some more evaluation criteria (like sheep-locked fields).
  This would especially be useful to let the computer player play more
  strategically (prelocking fields was the method I just won against
- the computer tigers.
+ the computer tigers. sheep-locked fields have one nasty aspect:
+ they are somewhat difficult to calculate and take more time to set
+ up than usually can be precalculated, so some explicit approach
+ should probably be taken to add strategic intelligence
+
+-The first try to account for sheep controlled fields is a bit slow
+ yet ...  and I am afraid the algorithm does not what it should do
+ ... but just a little more time ... it is even worth a try to make
+ the available fields the primary measure ... no left fields to move
+ to is equivalent to four trapped tigers, but is a more strategic and
+ less tactic point of view
+
+-The need for more strategic playing sheep gets obvious when you
+ demonstrate that the depth 6 sheep ai does not win against the depth
+ 2 tiger ai (also a deeper lookahead in the endgame, when it is
+ feasible to calculate it, will probably be neccessary)
 
 -A nicer user interface and a user interface and a cleaner interface
  for programs to avoid states, which freeze the client. The nicest
@@ -99,3 +114,7 @@ TODO
 -Apologies for the tabs in indentations ... one of the first things
  done after a reinstall, and it seems I've forgotten to tell emacs not
  to use tabs. (And I thought I had copied my .emacs)
+
+-Hm it seems I calculate a little too much: the assignment of values
+ ignores most of the calculated boards, I guess that may be
+ inefficient ;). It interesting what kinds of stupid mistakes you make.

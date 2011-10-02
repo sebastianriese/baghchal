@@ -116,6 +116,38 @@ int genmoves_tiger(state st, state *res) {
   return moves;
 }
 
+// compute all tiger reachable positions
+// by a tri-colour algorithm
+// imagine a wavefront ...
+// hope this isn't too slow
+// well it is still quite expensive
+// (and not exact, just an approximation from below
+// due to the tri-colour logic: a sheep may be jumped
+// and we may fail to consider other sheep, that may be
+// jumped as a result of this event)
+// think about the accurate calculator ...
+int tiger_reachable(state st) {
+  state states[64];
+  state black, gray, newblack;
+  black = st;
+  black.tiger = 0;
+  newblack = black;
+  gray  = st;
+
+  while (hamming(gray.tiger)) {
+    int n = genmoves_tiger(gray, states);
+    for (int i = 0; i < n; i++) {
+      newblack.tiger |= states[i].tiger;
+      newblack.sheep &= states[i].sheep;
+    }
+    gray.tiger = newblack.tiger & ~black.tiger;
+    gray.sheep = newblack.sheep;
+    black = newblack;
+  }
+
+  return hamming(~black.tiger & ~black.sheep);
+}
+
 // the caller must ensure, that res is sufficiently large,
 // the actual number of possible moves is returned
 // NOTE: it is simple to obtain a safe bound for the length of res
@@ -215,7 +247,7 @@ int ai_move_rec(state *states, int n, int *score, int depth, int tiger) {
     if (blocked == 4) {
       *score = MAXSCORE; // if we win nothing else matters, so a win gets max score
     } else {
-      *score = SHEEPWEIGHT * hamming(states[0].sheep) + TRAPPEDWEIGHT * blocked;
+      *score = SHEEPWEIGHT * hamming(states[0].sheep) + TRAPPEDWEIGHT * blocked + LOCKEDWEIGHT * tiger_reachable(states[0]);
     }
     return 0;
   } else {
@@ -306,7 +338,7 @@ void gameloop(FILE *in, FILE *out, int verb, int cm, int ait, int ais) {
        }
      }
 
-     int ai_depth = 6;
+     int ai_depth = 4;
      /* if (genmoves(game[turn-1], news) <= 5) { */
      /*   ai_depth = 10; */
      /* } */
@@ -316,7 +348,7 @@ void gameloop(FILE *in, FILE *out, int verb, int cm, int ait, int ais) {
 	 write_board(game[turn-1], out);
        }
 
-       apply_move(ai_move(game[turn-1], ai_depth));
+       apply_move(ai_move(game[turn-1], ai_depth + 1));
      }
      else if (game[turn-1].turn == TURN_TIGER && ait) {
        if (cm) {

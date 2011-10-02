@@ -32,9 +32,10 @@ const uint64_t BOARDLEN = 5;
 const uint64_t BOARDPLACES = 25;
 
 // AI calibration
-const int SHEEPWEIGHT = 5;
-const int TRAPPEDWEIGHT = 1;
-const int MAXSCORE = 104; // XXX: update according to SHEEPWEIGHT * MAXSHEEP + TRAPPEDWEIGHT * 4
+const int SHEEPWEIGHT = 131;
+const int TRAPPEDWEIGHT = 26;
+const int LOCKEDWEIGHT = 1;
+const int MAXSCORE = 2749; // XXX: update according to SHEEPWEIGHT * MAXSHEEP + TRAPPEDWEIGHT * 4 + LOCKEDWEIGHT * 25
 
 // board connections - each byte contains the possible moves
 // by (-1,-1), (-1,0), (-1,1), ..

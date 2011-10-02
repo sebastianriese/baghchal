@@ -26,7 +26,7 @@ each turn, to the free board places. When all 20 sheep are set (when a
 sheep is eaten it is not added back to that pool), sheep can move like
 tigers, except they can not jump tigers or sheep.
 
-The sheep win, when the tigers can not move any longer, the tigers win
+The sheep win, if the tigers can not move any longer, the tigers win
 when they ate 5 sheep.
 
 The traditional implementation of the game is a piece of paper, on
@@ -77,6 +77,14 @@ TODO
  be deeper (one may even search exhaustively for a winning turn from a
  certain point).
 
+-Breadth first search for AI. Especially useful in the beginning to
+ simulate faster.
+
+-Perhaps some more evaluation criteria (like sheep-locked fields).
+ This would especially be useful to let the computer player play more
+ strategically (prelocking fields was the method I just won against
+ the computer tigers.
+
 -A nicer user interface and a user interface and a cleaner interface
  for programs to avoid states, which freeze the client. The nicest
  thing would be a query/answer system.
@@ -87,3 +95,7 @@ TODO
 -Think about ways to speedup the turn generator and remove the code
  duplication in the functions genmoves_sheep, genmoves_tiger and
  blocked_tigers
+
+-Apologies for the tabs in indentations ... one of the first things
+ done after a reinstall, and it seems I've forgotten to tell emacs not
+ to use tabs. (And I thought I had copied my .emacs)

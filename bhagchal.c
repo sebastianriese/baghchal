@@ -14,6 +14,7 @@ int genmoves_sheep(state st, state *res) {
 	res[moves].turn = TURN_TIGER;
 	res[moves].setsheep++;
 	res[moves++].sheep |= (1ULL << i);
+	assert(moves <= 64);
       }
     }
   } else {
@@ -31,12 +32,14 @@ int genmoves_sheep(state st, state *res) {
 	      res[moves].turn = TURN_TIGER;
 	      res[moves].sheep &= ~(1ULL << i);
 	      res[moves++].sheep |= (1ULL << newplace);
+	      assert(moves <= 64);
 	    }
 	  }
 	}
       }
     }
   }
+
   return moves;
 }
 
@@ -70,7 +73,7 @@ int blocked_tigers(state st) {
 	blocked++;
     }
   }
-
+  assert(blocked <= 4);
   return blocked;
 }
 
@@ -91,6 +94,7 @@ int genmoves_tiger(state st, state *res) {
 	    res[moves].turn = TURN_SHEEP;
 	    res[moves].tiger &= ~(1ULL << i);
 	    res[moves++].tiger |= 1ULL << newplace;
+	    assert(moves <= 64);
 	  } else if ((1ULL << newplace) & st.sheep) {
 	    // if there is a sheep, it may be possible to jump
 	    if (CONNECTIONS[newplace] & (1u << p)) { // jumps are straigh on in the same direction
@@ -101,6 +105,7 @@ int genmoves_tiger(state st, state *res) {
 		res[moves].sheep &= ~(1ULL << newplace);
 		res[moves].tiger &= ~(1ULL << i);
 		res[moves++].tiger |= 1ULL << jumpplace;
+		assert(moves <= 64);
 	      }
 	    }
 	  }
@@ -108,7 +113,6 @@ int genmoves_tiger(state st, state *res) {
       }
     }
   }
-
   return moves;
 }
 
@@ -195,21 +199,23 @@ void write_board(state st, FILE *to) {
   }
 }
 
+// minimax move selector
 int ai_move_rec(state *states, int n, int *score, int depth, int tiger) {
-  if (depth == 0 || n == 0) {
+  if (n == 0) {
+    if (tiger)
+      *score = MAXSCORE;
+    else
+      *score = 0; // have the sheep lost in that case or is the move just jumped
+                  // ... I hope I did not use the change of turn as an invariant somewhere
+                  // I played myself in such an situation against ai tigers ...
+    return 0;
+  } else if (depth == 0) {
     // fprintf(stderr, "SHEEP %d\n", hamming(states[0].sheep));
-    if (n == 0) {
-      if (tiger)
-	*score = MAXSCORE;
-      else
-	*score = 0;
+    int blocked = blocked_tigers(states[0]);
+    if (blocked == 4) {
+      *score = MAXSCORE; // if we win nothing else matters, so a win gets max score
     } else {
-      int blocked = blocked_tigers(states[0]);
-      if (blocked == 4) {
-	*score = MAXSCORE; // for winning we may loose a sheep
-      } else {
-	*score = SHEEPWEIGHT * hamming(states[0].sheep) + TRAPPEDWEIGHT * blocked;
-      }
+      *score = SHEEPWEIGHT * hamming(states[0].sheep) + TRAPPEDWEIGHT * blocked;
     }
     return 0;
   } else {
@@ -218,7 +224,8 @@ int ai_move_rec(state *states, int n, int *score, int depth, int tiger) {
       *score = MAXSCORE;
     else
       *score = 0;
-    state *nstates = (state *) malloc(sizeof(state) * 64);
+    // state *nstates = (state *) malloc(sizeof(state) * 64);
+    state *nstates = &states[64];
     for (int i = 0; i < n; i++) {
       int tmp;
       int k = genmoves(states[i], nstates);
@@ -228,16 +235,13 @@ int ai_move_rec(state *states, int n, int *score, int depth, int tiger) {
 	best = i;
       }
     }
-    free(nstates);
+    // free(nstates);
     return best;
   }
 }
 
 state ai_move(state st, int depth) {
-  // todo: one huge chunk of memory, to which the states are written
-  // continuously ... that should work pretty well
-  // wait isn't that exactly what obstacks do ... portability?
-  state *states = (state *) malloc(sizeof(state) * 64);
+  state *states = (state *) malloc(sizeof(state) * 64 * (depth + 2));
   int n = genmoves(st, states);
   int score;
 
@@ -302,14 +306,17 @@ void gameloop(FILE *in, FILE *out, int verb, int cm, int ait, int ais) {
        }
      }
 
+     int ai_depth = 6;
+     /* if (genmoves(game[turn-1], news) <= 5) { */
+     /*   ai_depth = 10; */
+     /* } */
      if (game[turn-1].turn == TURN_SHEEP && ais) {
-       int depth = 6;
        if (cm) {
 	 write_turn(game[turn-1], out);
 	 write_board(game[turn-1], out);
        }
 
-       apply_move(ai_move(game[turn-1], depth));
+       apply_move(ai_move(game[turn-1], ai_depth));
      }
      else if (game[turn-1].turn == TURN_TIGER && ait) {
        if (cm) {
@@ -317,7 +324,7 @@ void gameloop(FILE *in, FILE *out, int verb, int cm, int ait, int ais) {
 	 write_board(game[turn-1], out);
        }
 
-       apply_move(ai_move(game[turn-1], 6));
+       apply_move(ai_move(game[turn-1], ai_depth));
      }
      else {
        if (verb) {
@@ -397,13 +404,19 @@ void usage() {
   fputs("usage: bhagchal [-vhtsa]\n", stdout);
 }
 
+void version() {
+  fputs("bhagchal 0.1\n", stdout);
+}
+
 void help() {
+  usage();
+  version();
   fputs(
   "written by Sebastian Riese <sebastian.riese.mail@web.de>\n"
   "This is a the bhag chal board game.\n"
   "The interface is crappy currently, but there\n"
   "is a simple Python/Tk frontend available called tkchal.py\n"
-  "The interface will change Real Soon Now.\n"
+  "The interface will be improved Real Soon Now.\n"
   "Options:\n"
   "-v    -- print out boards more human readable\n"
   "-s/-t -- sheep/tiger are played by computer\n"

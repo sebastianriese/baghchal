@@ -11,7 +11,7 @@ RULES
 The Board in its initial configuration is shown in Fig. 1. o denotes
 an empty place, |, \, / and --- denote connections between the fields.
 
-The two parties use different pieces: One of them playes the wolves or
+The two parties use different pieces: One of them plays the wolves or
 tigers (T) the other plays sheep or goats (or whatever, S). The
 parties move alternating.
 
@@ -27,11 +27,11 @@ sheep is eaten it is not added back to that pool), sheep can move like
 tigers, except they can not jump tigers or sheep.
 
 The sheep win, if the tigers can not move any longer, the tigers win
-when they ate 5 sheep.
+if they ate 5 sheep.
 
 The traditional implementation of the game is a piece of paper, on
-which the board is written with a pen, twenty small (sheep) stones and
-four larger ones (tigers).
+which the board is drawn with a pen or pencil, twenty small stones
+(sheep) and four larger ones (tigers).
 
 T---o---o---o---T
 | \ | / | \ | / |
@@ -67,54 +67,6 @@ prints help (currently nothing) and q exits.
 For more comfort while playing the Python/Tk frontend is strongly
 recommended. It is invoked as tkchal.py and should be sufficiently
 intuitive (except that the turns done by AI are shown immediately
-after your turn, without showing the configuration after your turn).
-
-TODO
-----
-
--Make AI faster in the beginning of the game, and use the fact, that
- in later game the search tree is smaller and therefore the search can
- be deeper (one may even search exhaustively for a winning turn from a
- certain point).
-
--Breadth first search for AI. Especially useful in the beginning to
- simulate faster.
-
--Perhaps some more evaluation criteria (like sheep-locked fields).
- This would especially be useful to let the computer player play more
- strategically (prelocking fields was the method I just won against
- the computer tigers. sheep-locked fields have one nasty aspect:
- they are somewhat difficult to calculate and take more time to set
- up than usually can be precalculated, so some explicit approach
- should probably be taken to add strategic intelligence
-
--The first try to account for sheep controlled fields is a bit slow
- yet ...  and I am afraid the algorithm does not what it should do
- ... but just a little more time ... it is even worth a try to make
- the available fields the primary measure ... no left fields to move
- to is equivalent to four trapped tigers, but is a more strategic and
- less tactic point of view
-
--The need for more strategic playing sheep gets obvious when you
- demonstrate that the depth 6 sheep ai does not win against the depth
- 2 tiger ai (also a deeper lookahead in the endgame, when it is
- feasible to calculate it, will probably be neccessary)
-
--A nicer user interface and a user interface and a cleaner interface
- for programs to avoid states, which freeze the client. The nicest
- thing would be a query/answer system.
-
--Better memory management, perhaps randomization of indifferent turns.
- This would make a game against the AI more interesting.
-
--Think about ways to speedup the turn generator and remove the code
- duplication in the functions genmoves_sheep, genmoves_tiger and
- blocked_tigers
-
--Apologies for the tabs in indentations ... one of the first things
- done after a reinstall, and it seems I've forgotten to tell emacs not
- to use tabs. (And I thought I had copied my .emacs)
-
--Hm it seems I calculate a little too much: the assignment of values
- ignores most of the calculated boards, I guess that may be
- inefficient ;). It interesting what kinds of stupid mistakes you make.
+after your turn, without showing the configuration after your turn,
+okay not *immediately*; the AI usually takes it's time, well it has to
+consider a few hundred millions of possible board configurations).

@@ -1,0 +1,52 @@
+TODO
+
+-Make AI faster in the beginning of the game, and use the fact, that
+ in later game the search tree is smaller and therefore the search can
+ be deeper (one may even search exhaustively for a winning turn from a
+ certain point).
+
+-For the beginning of the game precalculated tables may be used, to
+ decrease the time at the cost of harddisk space (it should be a
+ feature of the program to create such tables, and to use them, if
+ present)
+
+-Breadth first search for AI. Especially useful in the beginning to
+ simulate faster.
+
+-Perhaps some more evaluation criteria (like sheep-locked fields).
+ This would especially be useful to let the computer player play more
+ strategically (prelocking fields were the means that just let me win
+ against the computer tigers. Sheep-locked fields have one nasty
+ aspect: they are somewhat difficult to calculate and take more turns
+ to be set up than usually can be calculated ahead, so perhaps some
+ explicit approach should be taken to add strategic intelligence
+
+-The first try to account for sheep controlled fields is a bit slow
+ yet ...  and I am afraid the algorithm does not what it should do
+ ... but just a little more time ... it is even worth a try to make
+ the available fields the primary measure ... no left fields to move
+ to is equivalent to four trapped tigers, but is a more strategic and
+ less tactic point of view
+
+-The need for more strategic playing sheep gets obvious when you
+ demonstrate that the depth 6 sheep ai does not win against the depth
+ 2 tiger ai (also a deeper lookahead in the endgame, when it is
+ feasible to calculate it, will probably be neccessary)
+
+-A nicer user interface and a user interface and a cleaner interface
+ for programs to avoid states, which freeze the client. The nicest
+ thing would be a query/answer system.
+
+-Better memory management, perhaps randomization of indifferent turns.
+ This would make a game against the AI more interesting.
+
+-Think about ways to speedup the turn generator and remove the code
+ duplication in the functions genmoves_sheep, genmoves_tiger and
+ blocked_tigers
+
+-Apologies for the tabs in indentations ... one of the first things
+ done after a reinstall, and it seems I've forgotten to tell emacs not
+ to use tabs. (And I thought I had copied my .emacs)
+
+-Finally I hope everybody has a C99 compilant compiler around ... it
+ could get messy to port this code to an older C dialect

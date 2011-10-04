@@ -126,7 +126,9 @@ int genmoves_tiger(state st, state *res) {
 // and we may fail to consider other sheep, that may be
 // jumped as a result of this event)
 // think about the accurate calculator ...
-int tiger_reachable(state st) {
+int locked_fields(state st) {
+  // first calculate all fields reachable by
+  // tigers
   state states[64];
   state black, gray, newblack;
   black = st;
@@ -145,6 +147,8 @@ int tiger_reachable(state st) {
     black = newblack;
   }
 
+  // where no tiger can go, and no sheep is placed,
+  // there must be a locked field ...
   return hamming(~black.tiger & ~black.sheep);
 }
 
@@ -232,53 +236,47 @@ void write_board(state st, FILE *to) {
 }
 
 // minimax move selector
-int ai_move_rec(state *states, int n, int *score, int depth, int tiger) {
-  if (n == 0) {
-    if (tiger)
-      *score = MAXSCORE;
-    else
-      *score = 0; // have the sheep lost in that case or is the move just jumped
-                  // ... I hope I did not use the change of turn as an invariant somewhere
-                  // I played myself in such an situation against ai tigers ...
-    return 0;
-  } else if (depth == 0) {
+state ai_move_rec(state cur, state *space, int *score, int depth, int tiger) {
+  if (depth == 0) {
     // fprintf(stderr, "SHEEP %d\n", hamming(states[0].sheep));
-    int blocked = blocked_tigers(states[0]);
+    int blocked = blocked_tigers(cur);
     if (blocked == 4) {
       *score = MAXSCORE; // if we win nothing else matters, so a win gets max score
     } else {
-      *score = SHEEPWEIGHT * hamming(states[0].sheep) + TRAPPEDWEIGHT * blocked + LOCKEDWEIGHT * tiger_reachable(states[0]);
+      *score = SHEEPWEIGHT * hamming(cur.sheep) + TRAPPEDWEIGHT * blocked + LOCKEDWEIGHT * locked_fields(cur);
     }
-    return 0;
+    return cur;
   } else {
     int best = 0;
     if (tiger)
       *score = MAXSCORE;
     else
       *score = 0;
-    // state *nstates = (state *) malloc(sizeof(state) * 64);
-    state *nstates = &states[64];
-    for (int i = 0; i < n; i++) {
+
+    int k = genmoves(cur, space);
+    for (int i = 0; i < k; i++) {
       int tmp;
-      int k = genmoves(states[i], nstates);
-      ai_move_rec(nstates, k, &tmp, depth - 1, !tiger);
+
+      ai_move_rec(space[i], &space[k], &tmp, depth - 1, !tiger);
+
       if ((!tiger && tmp > *score) || (tiger && tmp < *score)) {
 	*score = tmp;
 	best = i;
       }
     }
     // free(nstates);
-    return best;
+    if (k == 0) {
+      return cur; // there is no possible move, so the new state can only be the old state
+    }
+
+    return space[best];
   }
 }
 
 state ai_move(state st, int depth) {
+  int score; // dummy
   state *states = (state *) malloc(sizeof(state) * 64 * (depth + 2));
-  int n = genmoves(st, states);
-  int score;
-
-  int best = ai_move_rec(states, n, &score, depth, st.turn == TURN_TIGER);
-  state res = states[best];
+  state res = ai_move_rec(st, states, &score, depth, st.turn == TURN_TIGER);
   free(states);
   return res;
 }

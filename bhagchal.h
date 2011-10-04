@@ -50,7 +50,9 @@ const uint8_t CONNECTIONS[25] = {
   0x70, 0x51, 0xf1, 0x51, 0xc1
 };
 
-/* const int8_t SHIFT[8] = {-6, -5, -4, 1, 6, 5, 4, -1}; */
+// the relative index of the next field, indexed by the
+// number of the bit, which encodes this direction in 
+// the CONNECTIONS array
 const int8_t SHIFT[8] = {-1, 4, 5, 6, 1, -4, -5, -6};
 
 // querying the board

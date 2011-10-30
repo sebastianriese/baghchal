@@ -68,5 +68,5 @@ For more comfort while playing the Python/Tk frontend is strongly
 recommended. It is invoked as tkchal.py and should be sufficiently
 intuitive (except that the turns done by AI are shown immediately
 after your turn, without showing the configuration after your turn,
-okay not *immediately*; the AI usually takes it's time, well it has to
+okay not *immediately*; the AI usually takes its time, well it has to
 consider a few hundred millions of possible board configurations).

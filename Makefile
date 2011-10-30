@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-Wall -O3 -std=c99
+CFLAGS=-Wall -g -std=c99
 
 all: bhagchal
 

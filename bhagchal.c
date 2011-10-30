@@ -286,11 +286,14 @@ state ai_move(state st, int depth) {
 // the others placed not to block their movement possibilities)
 // 36, but i am too lazy to check ... so just add a security margin
 // if the 64 does not hold (for MAXSHEEP == 20 and four tigers), 
-// feel free flame me intensely ;)
+// feel free to flame me intensely ;)
+// probably this should be done properly, with one large chunk of memory 
+// and stack like allocation deallocation, shouldn't be much slower, but therefore
+// much safer and more beautiful
 static state news[64];
 static int cap;
 static int turn;
-static state *game; // the entire game is recorded, this way undo is possible
+static state *game; // the entire game is recorded, this way undo is possible as well as replays and complete saves
 
 static void apply_move(state st) {
   if (turn == cap) {
@@ -336,7 +339,7 @@ void gameloop(FILE *in, FILE *out, int verb, int cm, int ait, int ais) {
        }
      }
 
-     int ai_depth = 4;
+     int ai_depth = 5;
      /* if (genmoves(game[turn-1], news) <= 5) { */
      /*   ai_depth = 10; */
      /* } */
@@ -346,7 +349,7 @@ void gameloop(FILE *in, FILE *out, int verb, int cm, int ait, int ais) {
 	 write_board(game[turn-1], out);
        }
 
-       apply_move(ai_move(game[turn-1], ai_depth + 1));
+       apply_move(ai_move(game[turn-1], ai_depth));
      }
      else if (game[turn-1].turn == TURN_TIGER && ait) {
        if (cm) {
@@ -396,6 +399,10 @@ void gameloop(FILE *in, FILE *out, int verb, int cm, int ait, int ais) {
 	 }
 
 	 if (cmd == 'u') {
+           if (ait || ais) {
+             undo_move();
+           }
+
 	   undo_move();
 	   goto TOP;
 	 }

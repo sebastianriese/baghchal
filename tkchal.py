@@ -6,6 +6,10 @@ from tkinter.constants import *
 import os
 import subprocess
 
+import configparser
+
+import itertools
+
 BHAGCHAL = os.getenv('BHAGCHAL')
 if BHAGCHAL == None:
     BHAGCHAL = './bhagchal'
@@ -20,11 +24,16 @@ class Board:
     TURN_TIGER=0
     TURN_SHEEP=1
     TURN_SETSHEEP=2
+    TURN_SHEEP_WIN=3
+    TURN_TIGER_WIN=4
 
+    # data for the interface to the game binary
     TURNMAP = {
         'S': TURN_SETSHEEP,
         's': TURN_SHEEP,
         'T': TURN_TIGER,
+        'D': TURN_TIGER_WIN,
+        'Z': TURN_SHEEP_WIN,
         'u': TURN_UNDEF # used for next move possibilities, is added as first line by the protocol parser
         }
 
@@ -38,6 +47,8 @@ class Board:
         TURN_SETSHEEP: 'S',
         TURN_SHEEP: 's',
         TURN_TIGER: 'T',
+        TURN_TIGER_WIN: 'D',
+        TURN_SHEEP_WIN: 'Z',
         TURN_UNDEF: 'u' # used for next move possibilities, is added as first line by the protocol parser
         }
 
@@ -67,7 +78,7 @@ class Board:
     def copy(self):
         board = Board()
         board.state = self.state
-        board.data = self.data[:]
+        board.data = list(self.data)
         return board
 
     def write_board(board):
@@ -81,66 +92,91 @@ class Board:
         return res
 
 class Game:
-    def __init__(self, canvas, status):
+    def __init__(self, canvas, statustext):
         self.board = None
         self.game = None
         self.moves = []
+        self.win = ''
 
         self.canvas = canvas
-        self.status = status
+        self.statustext = statustext
 
         self.cids = []
+
+        self.board_grid_x = [10,60,110,160,210]
+        self.board_grid_y = [10,60,110,160,210]
+        self.board_rect = [1,1,221,221]
+
+        self.tiger_radius = 7
+        self.sheep_radius = 5
+
+        self.config = configparser.SafeConfigParser(defaults = {'sheepcolor' : 'gray', 'tigercolor' : 'yellow'})
+        self.config.add_section('ui')
+        self.config.read(os.path.expanduser('~/.tkchal'))
+        self.sheep_color = self.config.get('ui', 'sheepcolor')
+        self.tiger_color = self.config.get('ui', 'tigercolor')
+
         self.draw_board()
 
+    def calc_board_pos(self):
+        w = self.canvas.winfo_width()
+        h = self.canvas.winfo_height()
+
     def draw_board(self):
-        self.canvas.create_rectangle(0, 0, 220, 220, fill='white')
+        self.calc_board_pos()
 
-        for x in [10, 60, 110, 160, 210]:
-            self.canvas.create_line(x, 10, x, 210)
-            self.canvas.create_line(x, 10, x, 210)
-            self.canvas.create_line(x, 10, x, 210)
-            self.canvas.create_line(x, 10, x, 210)
+        self.canvas.create_rectangle(*self.board_rect, fill='white')
 
-        for y in [10, 60, 110, 160, 210]:
-            self.canvas.create_line(10, y, 210, y)
-            self.canvas.create_line(10, y, 210, y)
-            self.canvas.create_line(10, y, 210, y)
-            self.canvas.create_line(10, y, 210, y)
+        board_min_x = self.board_grid_x[0]
+        board_max_x = self.board_grid_x[-1]
+        board_min_y = self.board_grid_y[0]
+        board_max_y = self.board_grid_y[-1]
+        board_center_x = self.board_grid_x[2]
+        board_center_y = self.board_grid_y[2]
 
-        self.canvas.create_line(10, 10, 210, 210)
-        self.canvas.create_line(10, 210, 210, 10)
+        for x in self.board_grid_x:
+            self.canvas.create_line(x, board_min_y, x, board_max_y)
 
-        self.canvas.create_line(110, 10, 210, 110)
-        self.canvas.create_line(210, 110, 110, 210)
-        self.canvas.create_line(110, 210, 10, 110)
-        self.canvas.create_line(10, 110, 110, 10)
+        for y in self.board_grid_y:
+            self.canvas.create_line(board_min_x, y, board_max_x, y)
+
+        self.canvas.create_line(board_min_x, board_min_y, board_max_x, board_max_y)
+        self.canvas.create_line(board_min_x, board_max_y, board_max_x, board_min_y)
+
+        self.canvas.create_line(board_center_x, board_min_y, board_max_x, board_center_y)
+        self.canvas.create_line(board_max_x, board_center_y, board_center_x, board_max_y)
+        self.canvas.create_line(board_center_x, board_max_y, board_min_x, board_center_y)
+        self.canvas.create_line(board_min_x, board_center_y, board_center_x, board_min_y)
 
 
 
     def draw(self):
         # here we could scale the canvas for a nice fit of the board to the window size
-
         self.canvas.unbind('<Button-1>')
         for cid in self.cids:
             self.canvas.delete(cid)
 
-        if self.board.state == Board.TURN_SETSHEEP:
-            self.canvas.bind('<Button-1>', self.insert_sheep)
-        elif self.board.state == Board.TURN_SHEEP:
-            self.canvas.bind('<ButtonPress-1>', self.move_sheep)
-            self.canvas.bind('<ButtonRelease-1>', self.move_sheep2)
-        elif self.board.state == Board.TURN_TIGER:
-            self.canvas.bind('<ButtonPress-1>', self.move_tiger)
-            self.canvas.bind('<ButtonRelease-1>', self.move_tiger2)
+        if not self.win:
+            self.statustext.set('your turn')
+
+            if self.board.state == Board.TURN_SETSHEEP:
+                self.canvas.bind('<Button-1>', self.insert_sheep)
+            elif self.board.state == Board.TURN_SHEEP:
+                self.canvas.bind('<ButtonPress-1>', self.move_sheep)
+                self.canvas.bind('<ButtonRelease-1>', self.move_sheep2)
+            elif self.board.state == Board.TURN_TIGER:
+                self.canvas.bind('<ButtonPress-1>', self.move_tiger)
+                self.canvas.bind('<ButtonRelease-1>', self.move_tiger2)
 
         
-
-        for entry, (y, x) in zip(self.board.data, ((x, y) for x in [0, 50, 100, 150, 200] for y in [0, 50, 100, 150, 200])):
+        tr = self.tiger_radius
+        sr = self.sheep_radius
+        for entry, (y, x) in zip(self.board.data, itertools.product(self.board_grid_x, self.board_grid_y)):
             if entry == Board.TIGER:
-                self.cids.append(self.canvas.create_oval(x, y, x+20, y+20, fill='yellow'))
+                self.cids.append(self.canvas.create_oval(x-tr, y-tr, x+tr, y+tr, fill=self.tiger_color))
 
             elif entry == Board.SHEEP:
-                self.cids.append(self.canvas.create_oval(x+5, y+5, x+15, y+15, fill='gray'))
+                self.cids.append(self.canvas.create_oval(x-sr, y-sr, x+sr, y+sr, fill=self.sheep_color))
 
     def apply_move(self, mymove):
         self.mymove = None
@@ -155,30 +191,25 @@ class Game:
             k += 1
         
         if k == len(self.moves):
-            # this is supposed to reach the status bar one day
-            # self.info('invalid move')
-
-            # some text for debugging purposes
-            # print("*****************************************")
-            # print("My Board")
-            # print(mymove.write_board())
-            # print("Possible Boards")
-            # for d in self.moves:
-            #     print(d.write_board())
-            # print("*****************************************")
-            pass
+            self.statustext.set('Invalid move')
         else:
             self.moves = []
             self.get_board()
             self.draw()
 
     def canvas_to_logical(self, x, y):
-        i, j = (x + 25) // 50, (y + 25) // 50
-        if i < 0: i = 0
-        if j < 0: j = 0
-        if i > 5: i = 5
-        if j > 5: j = 5
-        return i,j
+        ri, rj = None, None
+
+        for i, gx in enumerate(self.board_grid_x):
+            for j, gy in enumerate(self.board_grid_y):
+                if (x - gx) ** 2 + (y - gy) ** 2 < 100:
+                    ri, rj = i, j
+
+        if (ri, rj) == (None, None):
+            raise Exception
+
+        return ri, rj
+                
 
     def move_sheep(self, ev):
         i, j = self.canvas_to_logical(ev.x, ev.y)
@@ -220,14 +251,12 @@ class Game:
         self.apply_move(mymove)
 
     def get_board(self):
-        if self.game.poll() is not None:
-            raise Exception('Child process unexpectedly quit!')
-
         # read the current board from the pipe
         state = 'skip'
         text = ''
         while True:
             tmp = str(self.game.stdout.readline(), encoding='US-ASCII')
+
             if state == 'skip':
                 if tmp.strip() == 'START':
                     state = 'board'
@@ -241,27 +270,27 @@ class Game:
 
         self.board = Board.parse_board(text)
 
+        if self.board.state == Board.TURN_TIGER_WIN:
+                self.game.wait()
+                self.statustext.set('Tigers win!')
+                self.game = None
+                self.win = 'tigers'
+                return
+
+        elif tmp.strip() == Board.TURN_SHEEP_WIN:
+                self.game.wait()
+                self.statustext.set('Sheep win!')
+                self.win = 'sheep'
+                self.game = None
+                return
+
     def get_moves(self):
         self.moves = []
-
-        if self.game.poll() is not None:
-            raise Exception('Child process unexpectedly quit!')
 
         state = 'skip'
         cur = 'u\n'
         while True:
             tmp = str(self.game.stdout.readline(), encoding='US-ASCII')
-            if tmp.strip() == 'Tigers win!':
-                self.game.wait()
-                self.status.text = 'Tigers win!'
-                self.game = None
-                return
-
-            elif tmp.strip() == 'Sheep win!':
-                self.game.wait()
-                self.status.text = 'Sheep win!'
-                self.game = None
-                return
 
             if state == 'skip':
                 if tmp.strip() == '#0':
@@ -279,7 +308,28 @@ class Game:
                     cur += tmp
 
     def new(self):
-        self.game = subprocess.Popen([BHAGCHAL, '-t'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=None)
+        cmdline = [BHAGCHAL]
+        self.config = configparser.SafeConfigParser()
+        self.config.add_section('game')
+        self.config.read(os.path.expanduser('~/.tkchal'))
+
+        if self.config.has_option('game', 'ai'):
+            if self.config.get('game', 'ai').lower() == 'sheep':
+                cmdline.append('-s')
+            elif self.config.get('game', 'ai').lower() == 'tiger':
+                cmdline.append('-t')
+        else:
+            cmdline.append('-s')
+
+        cmdline.append('-d')
+
+        if self.config.has_option('game', 'aistrength'):
+            cmdline.append(self.config.get('game', 'aistrength'))
+        else:
+            cmdline.append('3')
+
+        self.game = subprocess.Popen(cmdline, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=None)
+        self.win = ''
         self.get_board()
         self.get_moves()
         self.draw()
@@ -290,30 +340,85 @@ class Game:
         self.get_moves()
         self.draw()
 
+def configure():
+    config = configparser.SafeConfigParser()
+    config.add_section('game')
+    config.read(os.path.expanduser('~/.tkchal'))
+
+    conftoplevel = tkinter.Toplevel(tk)
+    conftoplevel.title('Configuration')
+
+    tkinter.Label(conftoplevel, text='Computer plays:').pack()
+
+    aivar = tkinter.StringVar()
+
+    if config.has_option('game', 'ai'):
+        if config.get('game', 'ai').lower() == 'sheep':
+            aivar.set('sheep')
+        elif config.get('game', 'ai').lower() == 'tiger':
+            aivar.set('tiger')
+
+    sheep = tkinter.Radiobutton(conftoplevel, text='Sheep', variable=aivar, value='sheep')
+    tiger = tkinter.Radiobutton(conftoplevel, text='Tiger', variable=aivar, value='tiger')
+    
+    sheep.pack()
+    tiger.pack()
+
+    tkinter.Label(conftoplevel, text='AI depth').pack()
+    aistrengthvar = tkinter.IntVar()
+
+    if config.has_option('game', 'aistrength'):
+        aistrengthvar.set(config.getint('game', 'aistrength'))
+    else:
+        aistrengthvar.set(3)
+
+    tkinter.Entry(conftoplevel, textvariable=aistrengthvar).pack()
+
+
+    def save():
+        config.set('game', 'ai', aivar.get())
+        config.set('game', 'aistrength', str(aistrengthvar.get()))
+        with open(os.path.expanduser('~/.tkchal'), 'w') as fp:
+            config.write(fp)
+        conftoplevel.destroy()
+
+    def cancel():
+        conftoplevel.destroy()
+
+    savebutton = tkinter.Button(conftoplevel, text='Save', command=save)
+    cancelbutton = tkinter.Button(conftoplevel, text='Cancel', command=cancel)
+    savebutton.pack()
+    cancelbutton.pack()
+
 tk = tkinter.Tk()
 tk.title('Bhag Chal')
 
 frame = tkinter.Frame(tk)
 frame.pack(fill=BOTH, expand=1)
 
-canvas = tkinter.Canvas(frame)
-canvas.pack(fill=BOTH, expand=1)
+canvas = tkinter.Canvas(frame, width=220, height=220)
+canvas.pack(fill=BOTH, expand=1, side=TOP, padx=1, pady=1)
 
-menuframe = tkinter.Frame(frame)
-menuframe.pack(expand=1, fill=X)
-
-status = tkinter.Label(frame, text='foo', borderwidth=2, relief=RIDGE)
+statustext = tkinter.StringVar()
+status = tkinter.Label(frame, textvariable=statustext, borderwidth=2, relief=RIDGE)
 status.pack(expand=1, side=BOTTOM, fill=X)
 
-game = Game(canvas, status)
+menuframe = tkinter.Frame(frame)
+menuframe.pack(expand=1, fill=X, side=BOTTOM)
+
+game = Game(canvas, statustext)
+new = tkinter.Button(menuframe, text='Config', command=configure)
+new.pack(expand=1, side=LEFT, fill=X)
+
 new = tkinter.Button(menuframe, text='New Game', command=game.new)
 new.pack(expand=1, side=LEFT, fill=X)
 
 undo = tkinter.Button(menuframe, text='Undo', command=game.undo)
 undo.pack(expand=1, side=LEFT, fill=X)
 
-new = tkinter.Button(menuframe, text='Quit', command=tk.destroy)
-new.pack(expand=1, side=LEFT, fill=X)
+quit = tkinter.Button(menuframe, text='Quit', command=tk.destroy)
+quit.pack(expand=1, side=LEFT, fill=X)
 
-game.new()
+
+# game.new()
 tk.mainloop()

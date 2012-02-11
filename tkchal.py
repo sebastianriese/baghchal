@@ -1,5 +1,8 @@
 #!/usr/bin/python3
-
+"""
+A graphical user interface for the bhag chal board game
+written in python with tkinter
+"""
 import tkinter
 from tkinter.constants import *
 
@@ -97,6 +100,8 @@ class Game:
         self.game = None
         self.moves = []
         self.win = ''
+
+        self.mymove = None
 
         self.canvas = canvas
         self.statustext = statustext
@@ -390,6 +395,17 @@ def configure():
     savebutton.pack()
     cancelbutton.pack()
 
+def about():
+    abouttext = """\
+This is the graphical frontend for the bhagchal
+bhagchal engine."""
+    toplevel = tkinter.Toplevel(tk)
+    tkinter.Label(toplevel, text=abouttext, justify=LEFT).pack()
+
+def rules():
+    import webbrowser
+    webbrowser.open("https://en.wikipedia.org/wiki/Bagh_Chal")
+
 tk = tkinter.Tk()
 tk.title('Bhag Chal')
 
@@ -403,22 +419,33 @@ statustext = tkinter.StringVar()
 status = tkinter.Label(frame, textvariable=statustext, borderwidth=2, relief=RIDGE)
 status.pack(expand=1, side=BOTTOM, fill=X)
 
-menuframe = tkinter.Frame(frame)
-menuframe.pack(expand=1, fill=X, side=BOTTOM)
-
 game = Game(canvas, statustext)
-new = tkinter.Button(menuframe, text='Config', command=configure)
-new.pack(expand=1, side=LEFT, fill=X)
+tk.bind('<Control-n>', lambda event: game.new())
+tk.bind('<Control-u>', lambda event: game.undo())
 
-new = tkinter.Button(menuframe, text='New Game', command=game.new)
-new.pack(expand=1, side=LEFT, fill=X)
+menu = tkinter.Menu(tk)
+tk['menu'] = menu
 
-undo = tkinter.Button(menuframe, text='Undo', command=game.undo)
-undo.pack(expand=1, side=LEFT, fill=X)
+gamemenu = tkinter.Menu(menu, tearoff=0)
+menu.add_cascade(label = 'Game', menu=gamemenu)
 
-quit = tkinter.Button(menuframe, text='Quit', command=tk.destroy)
-quit.pack(expand=1, side=LEFT, fill=X)
+gamemenu.add_command(label='New Game', command=game.new)
+gamemenu.add_separator()
+gamemenu.add_command(label='Undo', command=game.undo)
+gamemenu.add_separator()
+gamemenu.add_command(label='Quit', command=tk.destroy)
+
+settings = tkinter.Menu(menu, tearoff=0)
+menu.add_cascade(label='Settings', menu=settings)
+
+settings.add_command(label='Preferences', command=configure)
+
+help = tkinter.Menu(menu, tearoff=0)
+menu.add_cascade(labe = 'Help', menu=help)
+
+help.add_command(label='Rules', command=rules)
+help.add_command(label='About', command=about)
 
 
-# game.new()
+game.new()
 tk.mainloop()

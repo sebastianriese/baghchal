@@ -277,7 +277,7 @@ class Game:
                 self.win = 'tigers'
                 return
 
-        elif tmp.strip() == Board.TURN_SHEEP_WIN:
+        elif self.board.state == Board.TURN_SHEEP_WIN:
                 self.game.wait()
                 self.statustext.set('Sheep win!')
                 self.win = 'sheep'

@@ -4,6 +4,15 @@
 
 #include <stdint.h>
 
+// strength parameters for the AI
+// twiddle around with these, but be warned
+// they may turn the game indefinitley slow
+#define AI_DEPTH_DEFAULT 5
+#define RECURSE_LIMIT_SHEEP 5000
+#define RECURSE_LIMIT_TIGER 1000
+#define RECURSE_INC 2
+#define LIMIT_MULT 2
+
 // the board is represented by
 // the sheep bitmap, the tiger bitmap
 // and the turn bit (0 sheep, 1 tiger)
@@ -35,7 +44,7 @@ const uint64_t BOARDPLACES = 25;
 const int SHEEPWEIGHT = 131;
 const int TRAPPEDWEIGHT = 26;
 const int LOCKEDWEIGHT = 1;
-const int MAXSCORE = 2749; // XXX: update according to SHEEPWEIGHT * MAXSHEEP + TRAPPEDWEIGHT * 4 + LOCKEDWEIGHT * 25
+const int MAXSCORE = 2749; // XXX: update according to SHEEPWEIGHT * MAXSHEEP + TRAPPEDWEIGHT * 4 + LOCKEDWEIGHT * 25 + 1
 
 // board connections - each byte contains the possible moves
 // by (-1,-1), (-1,0), (-1,1), ..
@@ -71,6 +80,8 @@ const int HAMMING_NYBBLE[16] = {
 // 0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
    0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4
 };
+
+// calculate the hamming weight of the argument
 static inline int hamming(uint64_t n) {
   int res = 0;
   for (int i = 0; i < 16; i++) {

@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <ctype.h>
 
+#include <time.h>
+
 int genmoves_sheep(state st, state *res) {
   int moves = 0;
   if (st.setsheep < MAXSHEEP) {
@@ -206,6 +208,14 @@ void draw_board(state st, FILE *to) {
   }
 }
 
+void write_sheep_win(FILE *to) {
+  fputs("Z\n", to);
+}
+
+void write_tigers_win(FILE *to) {
+  fputs("D\n", to);
+}
+
 void write_turn(state st, FILE *to) {
   if (st.turn == TURN_TIGER) {
     fputs("T\n", to);
@@ -235,8 +245,14 @@ void write_board(state st, FILE *to) {
   }
 }
 
+// todo design the breadth first search ... this will need some datastructures
+// to remember the currently considered configurations of the board
+// An intelligent stop criterion (primarily considering spent time, but also
+// searching on if for example winning is probable) would increasy the strength
+// notably
+
 // minimax move selector
-state ai_move_rec(state cur, state *space, int *score, int depth, int tiger) {
+state ai_move_rec(state cur, state *space, int *score, int depth, int tiger, int *moves) {
   if (depth == 0) {
     // fprintf(stderr, "SHEEP %d\n", hamming(states[0].sheep));
     int blocked = blocked_tigers(cur);
@@ -249,15 +265,16 @@ state ai_move_rec(state cur, state *space, int *score, int depth, int tiger) {
   } else {
     int best = 0;
     if (tiger)
-      *score = MAXSCORE;
+      *score = MAXSCORE + depth; // prefer to win fast!
     else
-      *score = 0;
+      *score = 0 - depth; // prefer to win fast!
 
     int k = genmoves(cur, space);
+    *moves += k;
     for (int i = 0; i < k; i++) {
       int tmp;
 
-      ai_move_rec(space[i], &space[k], &tmp, depth - 1, !tiger);
+      ai_move_rec(space[i], &space[k], &tmp, depth - 1, !tiger, moves);
 
       if ((!tiger && tmp > *score) || (tiger && tmp < *score)) {
 	*score = tmp;
@@ -273,12 +290,19 @@ state ai_move_rec(state cur, state *space, int *score, int depth, int tiger) {
   }
 }
 
-state ai_move(state st, int depth) {
+state ai_move(state st, int depth, int limit) {
   int score; // dummy
-  state *states = (state *) malloc(sizeof(state) * 64 * (depth + 2));
-  state res = ai_move_rec(st, states, &score, depth, st.turn == TURN_TIGER);
+  state *states = (state *) malloc(sizeof(state) * 64 * (depth + 4));
+  int moves = 0;
+  state res = ai_move_rec(st, states, &score, depth, st.turn == TURN_TIGER, &moves);
   free(states);
-  return res;
+
+  if (moves <= limit) {
+    return ai_move(st, depth+RECURSE_INC, LIMIT_MULT*limit);
+  }
+
+  /* printf("Considered %d moves, depth %d\n", moves, depth); */
+ return res;
 }
 
 // should be plenty of space:
@@ -315,7 +339,7 @@ static void undo_move() {
   }
 }
 
-void gameloop(FILE *in, FILE *out, int verb, int cm, int ait, int ais) {
+void gameloop(FILE *in, FILE *out, int verb, int cm, int ait, int ais, int ai_depth) {
   while (1) {
   TOP:
      assert((game[turn-1].sheep & game[turn-1].tiger) == 0);
@@ -323,33 +347,39 @@ void gameloop(FILE *in, FILE *out, int verb, int cm, int ait, int ais) {
      // check for win situation
      if (game[turn-1].turn == TURN_TIGER) {
        if (blocked_tigers(game[turn-1]) == 4) {
-	 fputs("Sheep win!\n", out);
-
-	 // for debugging tkchal
-	 fputs("Sheep win!\n", stderr);
+         if (verb) {
+           fputs("Sheep win!\n", out);
+           draw_board(game[turn-1], out);
+         } else {
+           fputs("START\n", out);
+           write_sheep_win(out);
+           write_board(game[turn-1], out);
+           fputs("END\n", out);
+         }
 	 return;
        }
      } else {
-       if (hamming(game[turn-1].sheep) <= 15 && game[turn-1].setsheep == MAXSHEEP) {
-	 fputs("Tigers win!\n", out);
-
-	 // for debugging tkchal
-	 fputs("Tigers win!\n", stderr);
+       if (game[turn-1].setsheep - hamming(game[turn-1].sheep) >= 5) {
+         if (verb) {
+           fputs("Tigers win!\n", out);
+           draw_board(game[turn-1], out);
+         } else {
+           fputs("START\n", out);
+           write_tigers_win(out);
+           write_board(game[turn-1], out);
+           fputs("END\n", out);
+         }
 	 return;
        }
      }
 
-     int ai_depth = 5;
-     /* if (genmoves(game[turn-1], news) <= 5) { */
-     /*   ai_depth = 10; */
-     /* } */
      if (game[turn-1].turn == TURN_SHEEP && ais) {
        if (cm) {
 	 write_turn(game[turn-1], out);
 	 write_board(game[turn-1], out);
        }
 
-       apply_move(ai_move(game[turn-1], ai_depth));
+       apply_move(ai_move(game[turn-1], ai_depth, RECURSE_LIMIT_SHEEP));
      }
      else if (game[turn-1].turn == TURN_TIGER && ait) {
        if (cm) {
@@ -357,7 +387,7 @@ void gameloop(FILE *in, FILE *out, int verb, int cm, int ait, int ais) {
 	 write_board(game[turn-1], out);
        }
 
-       apply_move(ai_move(game[turn-1], ai_depth));
+       apply_move(ai_move(game[turn-1], ai_depth, RECURSE_LIMIT_TIGER));
      }
      else {
        if (verb) {
@@ -438,7 +468,7 @@ void gameloop(FILE *in, FILE *out, int verb, int cm, int ait, int ais) {
 }
 
 void usage() {
-  fputs("usage: bhagchal [-vhtsa]\n", stdout);
+  fputs("usage: bhagchal [-vhtsa] [-d NUM]\n", stdout);
 }
 
 void version() {
@@ -458,6 +488,7 @@ void help() {
   "-v    -- print out boards more human readable\n"
   "-s/-t -- sheep/tiger are played by computer\n"
   "-a    -- print the board when the computer has moved as well\n"
+  "-d N  -- set AI strength (default 5)\n"
   "-h    -- print this help and exit\n", stdout);
 }
 
@@ -465,12 +496,16 @@ int main(int argc, char *argv[]) {
   int verbose = 0,
     ait = 0,
     ais = 0,
-    cm = 0;
+    cm = 0,
+    ai_depth = AI_DEPTH_DEFAULT;
+
+  srand(time(NULL));
 
   for (int i = 1; i < argc; i++) {
     if (argv[i][0] == '-') {
-      for (int j = 1; argv[i][j] != 0; j++) {
-	switch (argv[i][j]) {
+      char *cur = argv[i];
+      for (int j = 1; cur[j] != 0; j++) {
+	switch (cur[j]) {
 	case 'h':
 	  help();
 	  exit(0);
@@ -481,6 +516,15 @@ int main(int argc, char *argv[]) {
 	case 'a':
 	  cm = 1;
 	  break;
+        case 'd':
+          i++;
+          if (i == argc) {
+            fputs("Missing argument for option -d!\n", stderr);
+            usage();
+            exit(1);
+          }
+          ai_depth = atoi(argv[i]);
+          break;
 	case 't':
 	  ait = 1;
 	  break;
@@ -506,6 +550,6 @@ int main(int argc, char *argv[]) {
   game = (state *) malloc(sizeof(state) * cap);
   game[0] = START;
 
-  gameloop(stdin, stdout, verbose, cm, ait, ais);
+  gameloop(stdin, stdout, verbose, cm, ait, ais, ai_depth);
   return 0;
 }

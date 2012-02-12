@@ -4,11 +4,28 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <string.h>
 
 #include <time.h>
 
-int genmoves_sheep(state st, state *res) {
+int rule_forbid_repetition = 0;
+
+// return 0 the proposed state occured before
+// return 1 otherwhise
+int check_repetition(state proposed, int nprev, state *prev) {
+  int valid = 1;
+  for (int l = 0; l < nprev; l++) {
+    if (memcmp(&proposed, &prev[l], sizeof(state)) == 0) {
+      valid = 0;
+      break;
+    }
+  }
+  return valid;
+}
+
+int genmoves_sheep(int nprev, state *prev, state *res) {
   int moves = 0;
+  state st = prev[nprev-1];
   if (st.setsheep < MAXSHEEP) {
     for (int i = 0; i < BOARDPLACES; i++) {
       if (! ((1ULL << i) & (st.sheep | st.tiger))) {
@@ -33,7 +50,14 @@ int genmoves_sheep(state st, state *res) {
 	      res[moves] = st;
 	      res[moves].turn = TURN_TIGER;
 	      res[moves].sheep &= ~(1ULL << i);
-	      res[moves++].sheep |= (1ULL << newplace);
+	      res[moves].sheep |= (1ULL << newplace);
+              
+              if (rule_forbid_repetition) {
+                if (check_repetition(moves[res], nprev, prev))
+                  moves++;
+              } else {
+                moves++;
+              }
 	      assert(moves <= 64);
 	    }
 	  }
@@ -79,9 +103,9 @@ int blocked_tigers(state st) {
   return blocked;
 }
 
-int genmoves_tiger(state st, state *res) {
+int genmoves_tiger(int nprev, state *prev, state *res) {
   int moves = 0;
-  
+  state st = prev[nprev-1];
   // there has to be a tiger to move
   for (int i = 0; i < BOARDPLACES; i++) {
     if ((1ULL << i) & st.tiger) {
@@ -95,7 +119,14 @@ int genmoves_tiger(state st, state *res) {
 	    res[moves] = st;
 	    res[moves].turn = TURN_SHEEP;
 	    res[moves].tiger &= ~(1ULL << i);
-	    res[moves++].tiger |= 1ULL << newplace;
+	    res[moves].tiger |= 1ULL << newplace;
+
+            if (rule_forbid_repetition) {
+              if (check_repetition(res[moves], nprev, prev)) moves++;
+            } else {
+              moves++;
+            }
+
 	    assert(moves <= 64);
 	  } else if ((1ULL << newplace) & st.sheep) {
 	    // if there is a sheep, it may be possible to jump
@@ -106,7 +137,15 @@ int genmoves_tiger(state st, state *res) {
 		res[moves].turn = TURN_SHEEP;
 		res[moves].sheep &= ~(1ULL << newplace);
 		res[moves].tiger &= ~(1ULL << i);
-		res[moves++].tiger |= 1ULL << jumpplace;
+                res[moves].tiger |= 1ULL << jumpplace;
+                
+                if (rule_forbid_repetition) {
+                  if (check_repetition(res[moves], nprev, prev))
+                    moves++;
+                } else {
+                  moves++;
+                }
+
 		assert(moves <= 64);
 	      }
 	    }
@@ -139,7 +178,7 @@ int locked_fields(state st) {
   gray  = st;
 
   while (hamming(gray.tiger)) {
-    int n = genmoves_tiger(gray, states);
+    int n = genmoves_tiger(1, &gray, states);
     for (int i = 0; i < n; i++) {
       newblack.tiger |= states[i].tiger;
       newblack.sheep &= states[i].sheep;
@@ -157,11 +196,12 @@ int locked_fields(state st) {
 // the caller must ensure, that res is sufficiently large,
 // the actual number of possible moves is returned
 // NOTE: it is simple to obtain a safe bound for the length of res
-int genmoves(state st, state *res) {
+int genmoves(int nprev, state *prev, state *res) {
+  state st = prev[nprev - 1];
   if (st.turn == TURN_SHEEP) {
-    return genmoves_sheep(st, res);
+    return genmoves_sheep(nprev, prev, res);
   } else {
-    return genmoves_tiger(st, res);
+    return genmoves_tiger(nprev, prev, res);
   }
 }
 
@@ -252,7 +292,7 @@ void write_board(state st, FILE *to) {
 // notably
 
 // minimax move selector
-state ai_move_rec(state cur, state *space, int *score, int depth, int tiger, int *moves) {
+state ai_move_rec(state cur, state *space, int *score, int depth, int tiger, int *moves, int nprev, state *prev) {
   if (depth == 0) {
     // fprintf(stderr, "SHEEP %d\n", hamming(states[0].sheep));
     int blocked = blocked_tigers(cur);
@@ -269,12 +309,13 @@ state ai_move_rec(state cur, state *space, int *score, int depth, int tiger, int
     else
       *score = 0 - depth; // prefer to win fast!
 
-    int k = genmoves(cur, space);
+    int k = genmoves(nprev, prev, space);
     *moves += k;
     for (int i = 0; i < k; i++) {
       int tmp;
 
-      ai_move_rec(space[i], &space[k], &tmp, depth - 1, !tiger, moves);
+      prev[nprev] = space[i];
+      ai_move_rec(space[i], &space[k], &tmp, depth - 1, !tiger, moves,  nprev + 1, prev);
 
       if ((!tiger && tmp > *score) || (tiger && tmp < *score)) {
 	*score = tmp;
@@ -290,15 +331,18 @@ state ai_move_rec(state cur, state *space, int *score, int depth, int tiger, int
   }
 }
 
-state ai_move(state st, int depth, int limit) {
+state ai_move(state st, int depth, int limit,  int nprev, state *prev) {
   int score; // dummy
   state *states = (state *) malloc(sizeof(state) * 64 * (depth + 4));
+  state *myprev = (state *) malloc(sizeof(state) * (nprev + depth + 4));
+  memcpy(myprev, prev, sizeof(state) * nprev);
   int moves = 0;
-  state res = ai_move_rec(st, states, &score, depth, st.turn == TURN_TIGER, &moves);
+  state res = ai_move_rec(st, states, &score, depth, st.turn == TURN_TIGER, &moves, nprev, myprev);
   free(states);
+  free(myprev);
 
   if (moves <= limit) {
-    return ai_move(st, depth+RECURSE_INC, LIMIT_MULT*limit);
+    return ai_move(st, depth+RECURSE_INC, LIMIT_MULT*limit, nprev, prev);
   }
 
   /* printf("Considered %d moves, depth %d\n", moves, depth); */
@@ -379,7 +423,7 @@ void gameloop(FILE *in, FILE *out, int verb, int cm, int ait, int ais, int ai_de
 	 write_board(game[turn-1], out);
        }
 
-       apply_move(ai_move(game[turn-1], ai_depth, RECURSE_LIMIT_SHEEP));
+       apply_move(ai_move(game[turn-1], ai_depth, RECURSE_LIMIT_SHEEP, turn, game));
      }
      else if (game[turn-1].turn == TURN_TIGER && ait) {
        if (cm) {
@@ -387,7 +431,7 @@ void gameloop(FILE *in, FILE *out, int verb, int cm, int ait, int ais, int ai_de
 	 write_board(game[turn-1], out);
        }
 
-       apply_move(ai_move(game[turn-1], ai_depth, RECURSE_LIMIT_TIGER));
+       apply_move(ai_move(game[turn-1], ai_depth, RECURSE_LIMIT_TIGER, turn, game));
      }
      else {
        if (verb) {
@@ -400,7 +444,7 @@ void gameloop(FILE *in, FILE *out, int verb, int cm, int ait, int ais, int ai_de
 	 fflush(out);
        }
 
-       int nmoves = genmoves(game[turn-1], news);
+       int nmoves = genmoves(turn, game, news);
        if (verb) {
 	 for (int m = 0; m < nmoves; m++) {
 	   fprintf(out, "Move #%d\n", m);
@@ -482,13 +526,18 @@ void help() {
   "written by Sebastian Riese <sebastian.riese.mail@web.de>\n"
   "This is a the bhag chal board game.\n"
   "The interface is crappy currently, but there\n"
-  "is a simple Python/Tk frontend available called tkchal.py\n"
+  "is a simple Python/Tk frontend available called tkchal\n"
   "The interface will be improved Real Soon Now.\n"
   "Options:\n"
+  "INTERFACE CONTROL\n"
   "-v    -- print out boards more human readable\n"
-  "-s/-t -- sheep/tiger are played by computer\n"
   "-a    -- print the board when the computer has moved as well\n"
+  "AI CONTROL\n"
+  "-s/-t -- sheep/tiger are played by computer\n"
   "-d N  -- set AI strength (default 5)\n"
+  "RULE MODIFICATIONS\n"
+  "-r    -- forbid repetition of constellations (slows the ai)\n"
+  "MISC OPTIONS\n"
   "-h    -- print this help and exit\n", stdout);
 }
 
@@ -513,6 +562,9 @@ int main(int argc, char *argv[]) {
 	case 'v':
 	  verbose = 1;
 	  break;
+        case 'r':
+          rule_forbid_repetition = 1;
+          break;
 	case 'a':
 	  cm = 1;
 	  break;

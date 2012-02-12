@@ -3,6 +3,15 @@
 A graphical user interface for the bhag chal board game
 written in python with tkinter
 """
+
+# TODO: all client server communication
+# shall be encapsulated in a thread
+# and interact with the GUI asynchronously
+
+# alternative: Build request, response
+# protocol in baghchal.c and then poll
+# for output here
+
 import tkinter
 from tkinter.constants import *
 
@@ -12,10 +21,6 @@ import subprocess
 import configparser
 
 import itertools
-
-BHAGCHAL = os.getenv('BHAGCHAL')
-if BHAGCHAL == None:
-    BHAGCHAL = './bhagchal'
 
 class Board:
 
@@ -313,10 +318,17 @@ class Game:
                     cur += tmp
 
     def new(self):
-        cmdline = [BHAGCHAL]
+        cmdline = ['bhagchal']
         self.config = configparser.SafeConfigParser()
         self.config.add_section('game')
+        self.config.add_section('engine')
         self.config.read(os.path.expanduser('~/.tkchal'))
+
+        if self.config.has_option('engine', 'path'):
+            cmdline[0] = os.path.expanduser(self.config.get('engine', 'path'))
+    
+        if os.getenv('BHAGCHAL') is not None:
+            cmdline[0] = os.path.expanduser(os.getenv('BHAGCHAL'))
 
         if self.config.has_option('game', 'ai'):
             if self.config.get('game', 'ai').lower() == 'sheep':

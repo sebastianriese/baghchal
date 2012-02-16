@@ -1,4 +1,5 @@
 #include "bhagchal.h"
+#include "movedb.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -9,6 +10,8 @@
 #include <time.h>
 
 int rule_forbid_repetition = 0;
+movedb *move_db = NULL;
+int winner = -1;
 
 // return 0 the proposed state occured before
 // return 1 otherwhise
@@ -291,6 +294,22 @@ void write_board(state st, FILE *to) {
 // searching on if for example winning is probable) would increasy the strength
 // notably
 
+int movedb_compare(movedb_entry *e1, movedb_entry *e2) {
+  if (e1 == NULL) {
+    if (e2 == NULL) {
+      return 0;
+    } else {
+      return !movedb_compare(e2, e1);
+    }
+  }
+
+  if (e2 == NULL) {
+    return e1->score > 0;
+  } else {
+    return e1->score * e2->param > e2->score * e1->param;
+  }
+}
+
 // minimax move selector
 state ai_move_rec(state cur, state *space, int *score, int depth, int tiger, int *moves, int nprev, state *prev) {
   if (depth == 0) {
@@ -304,6 +323,8 @@ state ai_move_rec(state cur, state *space, int *score, int depth, int tiger, int
     return cur;
   } else {
     int best = 0;
+    movedb_entry *best_movedb = NULL;
+
     if (tiger)
       *score = MAXSCORE + depth; // prefer to win fast!
     else
@@ -317,9 +338,21 @@ state ai_move_rec(state cur, state *space, int *score, int depth, int tiger, int
       prev[nprev] = space[i];
       ai_move_rec(space[i], &space[k], &tmp, depth - 1, !tiger, moves,  nprev + 1, prev);
 
-      if ((!tiger && tmp > *score) || (tiger && tmp < *score)) {
+      if (move_db != NULL && tmp == *score) {
+        movedb_entry *mdbe = lookup(move_db, space[i]);
+        if ((!tiger && movedb_compare(mdbe, best_movedb))
+            || (tiger && movedb_compare(mdbe, best_movedb))) {
+          *score = tmp;
+          best = i;
+          best_movedb = mdbe;
+        }
+      }
+      else if ((!tiger && tmp > *score) || (tiger && tmp < *score)) {
 	*score = tmp;
 	best = i;
+        if (move_db != NULL) {
+          best_movedb = lookup(move_db, space[i]);
+        }
       }
     }
     // free(nstates);
@@ -331,8 +364,36 @@ state ai_move_rec(state cur, state *space, int *score, int depth, int tiger, int
   }
 }
 
-state ai_move(state st, int depth, int limit,  int nprev, state *prev) {
+int npow(int base, int exponent) {
+  int res = 1;
+  int power = base;
+  while (exponent) {
+    if (exponent & 1) {
+      res *= power;
+    }
+    power *= power;
+    exponent >>= 1;
+  }
+  return res;
+}
+
+state ai_move(state st, int strength, int limit,  int nprev, state *prev) {
   int score; // dummy
+  state foo[64];
+
+  // calculate depth to use from strength and the number of currently
+  // possible moves ... account for the sheep/tiger assymmetry by
+  // calculating the possible moves for both from this board
+  int n_sheep = genmoves_sheep(nprev, prev, foo);
+  int n_tiger = genmoves_tiger(nprev, prev, foo);
+
+  /* int depth = (int)(log(strength * 10000) / log(10 * n_sheep + 10) + log(strength * 10000) / log(10 * n_tiger + 10)); */
+  int depth = strength;
+  while (npow((n_sheep + n_tiger) / 2 + 2, depth) < 400*npow(strength,3)) {
+    depth += 1;
+  }
+  printf("depth: %d\n", depth);
+
   state *states = (state *) malloc(sizeof(state) * 64 * (depth + 4));
   state *myprev = (state *) malloc(sizeof(state) * (nprev + depth + 4));
   memcpy(myprev, prev, sizeof(state) * nprev);
@@ -341,11 +402,8 @@ state ai_move(state st, int depth, int limit,  int nprev, state *prev) {
   free(states);
   free(myprev);
 
-  if (moves <= limit) {
-    return ai_move(st, depth+RECURSE_INC, LIMIT_MULT*limit, nprev, prev);
-  }
-
-  /* printf("Considered %d moves, depth %d\n", moves, depth); */
+  // well this should be available as verbose output
+  /* printf("Considered %d moves, depth %d, score %d\n", moves, depth, score); */
  return res;
 }
 
@@ -389,8 +447,13 @@ void gameloop(FILE *in, FILE *out, int verb, int cm, int ait, int ais, int ai_de
      assert((game[turn-1].sheep & game[turn-1].tiger) == 0);
 
      // check for win situation
+     // currently: regular win, or no possible moves
+     // (this includes forbidden repetition moves,
+     // should this perhaps just cause a zero-move turn)
+     // (but what if both cannot turn? a draw?)
      if (game[turn-1].turn == TURN_TIGER) {
-       if (blocked_tigers(game[turn-1]) == 4) {
+       state space[64];
+       if (blocked_tigers(game[turn-1]) == 4 || genmoves(turn, game, space) == 0) {
          if (verb) {
            fputs("Sheep win!\n", out);
            draw_board(game[turn-1], out);
@@ -400,10 +463,12 @@ void gameloop(FILE *in, FILE *out, int verb, int cm, int ait, int ais, int ai_de
            write_board(game[turn-1], out);
            fputs("END\n", out);
          }
+         winner = TURN_SHEEP;
 	 return;
        }
      } else {
-       if (game[turn-1].setsheep - hamming(game[turn-1].sheep) >= 5) {
+       state space[64];
+       if (game[turn-1].setsheep - hamming(game[turn-1].sheep) >= 5 || genmoves(turn, game, space) == 0) {
          if (verb) {
            fputs("Tigers win!\n", out);
            draw_board(game[turn-1], out);
@@ -413,6 +478,7 @@ void gameloop(FILE *in, FILE *out, int verb, int cm, int ait, int ais, int ai_de
            write_board(game[turn-1], out);
            fputs("END\n", out);
          }
+         winner = TURN_TIGER;
 	 return;
        }
      }
@@ -512,7 +578,7 @@ void gameloop(FILE *in, FILE *out, int verb, int cm, int ait, int ais, int ai_de
 }
 
 void usage() {
-  fputs("usage: bhagchal [-vhtsa] [-d NUM]\n", stdout);
+  fputs("usage: bhagchal [-vhtsar] [-d NUM]\n", stdout);
 }
 
 void version() {
@@ -535,6 +601,7 @@ void help() {
   "AI CONTROL\n"
   "-s/-t -- sheep/tiger are played by computer\n"
   "-d N  -- set AI strength (default 5)\n"
+  "-D/-w -- use move database, update move database (implies -D)\n"
   "RULE MODIFICATIONS\n"
   "-r    -- forbid repetition of constellations (slows the ai)\n"
   "MISC OPTIONS\n"
@@ -546,7 +613,9 @@ int main(int argc, char *argv[]) {
     ait = 0,
     ais = 0,
     cm = 0,
-    ai_depth = AI_DEPTH_DEFAULT;
+    ai_depth = AI_DEPTH_DEFAULT,
+    update_moves = 0,
+    use_moves = 0;
 
   srand(time(NULL));
 
@@ -562,6 +631,11 @@ int main(int argc, char *argv[]) {
 	case 'v':
 	  verbose = 1;
 	  break;
+        case 'w':
+          update_moves = 1;
+        case 'D':
+          use_moves = 1;
+          break;
         case 'r':
           rule_forbid_repetition = 1;
           break;
@@ -597,11 +671,38 @@ int main(int argc, char *argv[]) {
     }
   }
 
+  if (use_moves) {
+    // XXX do proper error checking
+    char bcmoves[1024];
+    strcat(strcpy(bcmoves, getenv("HOME")), "/.bcmoves");
+    move_db = load_movedb(bcmoves);
+  }
+
   cap = 128;
   turn = 1;
   game = (state *) malloc(sizeof(state) * cap);
   game[0] = START;
 
   gameloop(stdin, stdout, verbose, cm, ait, ais, ai_depth);
+
+  if (update_moves && winner != -1) {
+    char bcmoves[1024];
+    strcat(strcpy(bcmoves, getenv("HOME")), "/.bcmoves");
+
+    if (move_db == NULL) {
+      move_db = create_movedb(1021,128);
+    }
+
+    for (int i = 0; i < turn; i++) {
+      if (winner != game[i].turn) {
+        update_win(move_db, game[i]);
+      } else {
+        update_loss(move_db, game[i]);
+      }
+    }
+
+    save_movedb(move_db, bcmoves);
+  }
+
   return 0;
 }

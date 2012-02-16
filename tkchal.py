@@ -325,10 +325,14 @@ class Game:
         self.config.read(os.path.expanduser('~/.tkchal'))
 
         if self.config.has_option('engine', 'path'):
-            cmdline[0] = os.path.expanduser(self.config.get('engine', 'path'))
-    
+            cmdline[0] = os.path.expanduser(self.config.get('engine', 'path'))    
+
+
         if os.getenv('BHAGCHAL') is not None:
             cmdline[0] = os.path.expanduser(os.getenv('BHAGCHAL'))
+
+        if self.config.has_option('engine', 'args'):
+            cmdline += self.config.get('engine', 'args').split()
 
         if self.config.has_option('game', 'ai'):
             if self.config.get('game', 'ai').lower() == 'sheep':

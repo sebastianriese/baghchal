@@ -15,7 +15,7 @@ static state rotate(state st) {
         res.sheep |= 1ULL << (i + j * 5);
       }
 
-      if (tiger_at(st, i, j)) {
+      if (tiger_at(st, BOARDLEN - j - 1, i)) {
         res.tiger |= 1ULL << (i + j * 5);
       }
     }
@@ -30,11 +30,11 @@ static state mirror(state st) {
   res.tiger = 0ULL;
   for (int i = 0; i < BOARDLEN; i++) {
     for (int j = 0; j < BOARDLEN; j++) {
-      if (sheep_at(st, i, BOARDLEN - i - 1)) {
+      if (sheep_at(st, i, BOARDLEN - j - 1)) {
         res.sheep |= 1ULL << (i + j * 5);
       }
 
-      if (tiger_at(st, i, j)) {
+      if (tiger_at(st, i, BOARDLEN - j - 1)) {
         res.tiger |= 1ULL << (i + j * 5);
       }
     }
@@ -101,7 +101,7 @@ movedb *load_movedb(const char *filename) {
   if (file == NULL) {
     return NULL;
   }
-  
+
   movedb *db = (movedb *) malloc(sizeof(movedb));
 
   db->base = NULL;
@@ -122,11 +122,22 @@ movedb *load_movedb(const char *filename) {
   return db;
 }
 
+int *rehash_movedb(movedb *rehashed, movedb *old) {
+  for (uint64_t i = 0; i < old->hashsize; i++) {
+    hashbucket *bucket = &old->hash[i];
+    for (uint64_t j = 0; j < bucket->size; j++) {
+      // TODO ... remap insert
+      // need better hash algorithm to avoid clustering
+      // at small values
+    }
+  }
+}
+
 movedb *mmap_movedb(const char *filename) {
   // XXX to implement
   // rationale: faster starup time, less
-  // RAM usage facilitating the use of a 
-  // vast move db
+  // RAM usage facilitating the use of a
+  // vast move db (especially on 64 bit machines)
   return NULL;
 }
 
@@ -139,7 +150,7 @@ int save_movedb(movedb * db, const char *filename) {
     fwrite(db->hash[i], sizeof(hashbucket), 1, file);
     fwrite(db->hash[i]->entries, sizeof(movedb_entry), db->hash[i]->capacity, file);
   }
-  
+
   return 0;
 }
 
@@ -160,7 +171,7 @@ movedb_entry *insert(movedb *db, state st) {
   // TODO: implement expansion
   st = normalize(st);
   hashbucket *b = db->hash[hash(st) % db->hashsize];
-  
+
   if (b->size == b->capacity) {
     b->capacity += 128;
     b = db->hash[hash(st) % db->hashsize] = (hashbucket *)realloc(b, b->capacity*sizeof(movedb_entry));
@@ -180,7 +191,7 @@ int update_win(movedb *db, state st) {
     if (item == NULL)
       return 1;
   }
-  
+
   item->param++;
   item->score++;
 
@@ -194,7 +205,7 @@ int update_loss(movedb *db, state st) {
     if (item == NULL)
       return 1;
   }
-  
+
   item->param++;
   item->score--;
 
@@ -202,6 +213,7 @@ int update_loss(movedb *db, state st) {
 }
 
 // operations for storing absolute strength
+// not used currently
 int update_score(movedb *db, state st, int32_t strength) {
   movedb_entry *item = lookup(db, st);
   if (item == NULL) {
@@ -209,7 +221,7 @@ int update_score(movedb *db, state st, int32_t strength) {
     if (item == NULL)
       return 1;
   }
-  
+
   item->param = 0;
   item->score = strength;
 

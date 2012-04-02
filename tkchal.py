@@ -216,7 +216,7 @@ class Game:
                     ri, rj = i, j
 
         if (ri, rj) == (None, None):
-            raise Exception
+            raise Exception()
 
         return ri, rj
                 

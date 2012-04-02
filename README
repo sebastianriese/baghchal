@@ -3,7 +3,7 @@ An implementation of the bhag chal board game
 
 Author: Sebastian Riese <sebastian.riese.mail@web.de>
 
-usage: bhagchal [-astvh]
+usage: bhagchal [-astvhr] [-d NUM]
 
 RULES
 -----
@@ -70,3 +70,17 @@ intuitive (except that the turns done by AI are shown immediately
 after your turn, without showing the configuration after your turn,
 okay not *immediately*; the AI usually takes its time, well it has to
 consider a few hundred millions of possible board configurations).
+
+BUILDING
+--------
+
+Build with
+$ make
+
+Install with
+$ make install
+
+By adapting PREFIX in the Makefile you may adapt the installation
+location (default ist ~/.local). The rights of the installed files
+will be -r-xr-xr-x, if you don't like that, change the chmod commands
+in the install directive.

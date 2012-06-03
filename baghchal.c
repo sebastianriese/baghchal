@@ -1,4 +1,4 @@
-#include "bhagchal.h"
+#include "baghchal.h"
 #include "movedb.h"
 
 #include <assert.h>

@@ -1,12 +1,17 @@
 CC=gcc
 CFLAGS=-Wall -O3 -std=c99
 PREFIX=~/.local
+INSTALL_MODE=0555
 
-all: bhagchal
+all: baghchal
 
-install: bhagchal tkchal.py
-	cp bhagchal $(PREFIX)/bin
-	cp tkchal.py $(PREFIX)/bin/tkchal
-	chmod a+x $(PREFIX)/bin/tkchal
+clean:
+	rm baghchal
 
-bhagchal: bhagchal.c bhagchal.h
+install: baghchal tkchal.py
+	cp -f baghchal $(PREFIX)/bin
+	cp -f tkchal.py $(PREFIX)/bin/tkchal
+	chmod $(INSTALL_MODE) $(PREFIX)/bin/baghchal
+	chmod $(INSTALL_MODE) $(PREFIX)/bin/tkchal
+
+baghchal: baghchal.c baghchal.h

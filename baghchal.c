@@ -1,4 +1,4 @@
-#include "bhagchal.h"
+#include "baghchal.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -51,7 +51,7 @@ int genmoves_sheep(int nprev, state *prev, state *res) {
 	      res[moves].turn = TURN_TIGER;
 	      res[moves].sheep &= ~(1ULL << i);
 	      res[moves].sheep |= (1ULL << newplace);
-              
+
               if (rule_forbid_repetition) {
                 if (check_repetition(moves[res], nprev, prev))
                   moves++;
@@ -71,7 +71,7 @@ int genmoves_sheep(int nprev, state *prev, state *res) {
 
 int blocked_tigers(state st) {
   int blocked = 0;
-  
+
   // there has to be a tiger to move
   for (int i = 0; i < BOARDPLACES; i++) {
     if ((1ULL << i) & st.tiger) {
@@ -138,7 +138,7 @@ int genmoves_tiger(int nprev, state *prev, state *res) {
 		res[moves].sheep &= ~(1ULL << newplace);
 		res[moves].tiger &= ~(1ULL << i);
                 res[moves].tiger |= 1ULL << jumpplace;
-                
+
                 if (rule_forbid_repetition) {
                   if (check_repetition(res[moves], nprev, prev))
                     moves++;
@@ -353,9 +353,9 @@ state ai_move(state st, int depth, int limit,  int nprev, state *prev) {
 // I guess the maximal number of possible moves is (four sheep on the 8-moves positions,
 // the others placed not to block their movement possibilities)
 // 36, but i am too lazy to check ... so just add a security margin
-// if the 64 does not hold (for MAXSHEEP == 20 and four tigers), 
+// if the 64 does not hold (for MAXSHEEP == 20 and four tigers),
 // feel free to flame me intensely ;)
-// probably this should be done properly, with one large chunk of memory 
+// probably this should be done properly, with one large chunk of memory
 // and stack like allocation deallocation, shouldn't be much slower, but therefore
 // much safer and more beautiful
 static state news[64];
@@ -462,7 +462,7 @@ void gameloop(FILE *in, FILE *out, int verb, int cm, int ait, int ais, int ai_de
        int cmd;
        fflush(in);
        while ((cmd = fgetc(in)) != EOF) {
-      
+
 	 if (isspace(cmd)) {
 	   continue;
 	 }
@@ -493,7 +493,7 @@ void gameloop(FILE *in, FILE *out, int verb, int cm, int ait, int ais, int ai_de
 	   if (move >= nmoves) {
 	     fputs("Invalid turn!\n", out);
 	     continue;
-	     
+
 	   } else {
 	     apply_move(news[move]);
 	     break;
@@ -512,11 +512,11 @@ void gameloop(FILE *in, FILE *out, int verb, int cm, int ait, int ais, int ai_de
 }
 
 void usage() {
-  fputs("usage: bhagchal [-vhtsa] [-d NUM]\n", stdout);
+  fputs("usage: baghchal [-vhtsa] [-d NUM]\n", stdout);
 }
 
 void version() {
-  fputs("bhagchal 0.1\n", stdout);
+  fputs("baghchal 0.1\n", stdout);
 }
 
 void help() {
@@ -524,7 +524,7 @@ void help() {
   version();
   fputs(
   "written by Sebastian Riese <sebastian.riese.mail@web.de>\n"
-  "This is a the bhag chal board game.\n"
+  "This is a the Bagh-Chal board game.\n"
   "The interface is crappy currently, but there\n"
   "is a simple Python/Tk frontend available called tkchal\n"
   "The interface will be improved Real Soon Now.\n"

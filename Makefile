@@ -3,17 +3,22 @@ CFLAGS=-Wall -O3 -std=c99
 LIBS=-lm
 LDFLAGS=$(LIBS)
 PREFIX=~/.local
+INSTALL_MODE=0555
 
-all: bhagchal
+all: baghchal
+
+clean:
+	rm baghchal
+	rm movedb.o
+	rm movedb_inspect
+	rm tkchal
 
 install: bhagchal tkchal.py
-	chmod a-w bhagchal
-	cp -p bhagchal $(PREFIX)/bin
+	chmod $(INSTALL_MODE) bhagchal
+	cp -f --preserve=mode bhagchal $(PREFIX)/bin
 	cp tkchal.py tkchal
-	chmod a-w tkchal
-	chmod a+rx tkchal
-	cp -p tkchal $(PREFIX)/bin
-	chmod a+x $(PREFIX)/bin/tkchal
+	chmod $(INSTALL_MODE) tkchal
+	cp -f --preserve=mode tkchal $(PREFIX)/bin
 
 bhagchal: bhagchal.c bhagchal.h movedb.h movedb.o
 

@@ -1,9 +1,9 @@
 bhagchal 0.1
-An implementation of the bhag chal board game
+An implementation of the bagh chal board game
 
 Author: Sebastian Riese <sebastian.riese.mail@web.de>
 
-usage: bhagchal [-astvh]
+usage: baghchal [-astvhr] [-d NUM]
 
 RULES
 -----
@@ -42,7 +42,7 @@ o---o---o---o---o
 o---o---o---o---o
 | / | \ | / | \ |
 T---o---o---o---T
-Fig 1: Bhag Chal board in initial configuration
+Fig 1: Bagh-Chal board in initial configuration
 
 THIS IMPLEMENTATION
 -------------------
@@ -70,3 +70,18 @@ intuitive (except that the turns done by AI are shown immediately
 after your turn, without showing the configuration after your turn,
 okay not *immediately*; the AI usually takes its time, well it has to
 consider a few hundred millions of possible board configurations).
+
+BUILDING
+--------
+
+Build with
+$ make
+
+Install with
+$ make install
+
+By adapting PREFIX you may adapt the installation location (default
+is ~/.local). The rights of the installed files will be -r-xr-xr-x,
+if you don't like that, adapt INSTALL_MODE, for example:
+
+$ make install PREFIX=/usr INSTALL_MODE=0550

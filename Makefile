@@ -13,14 +13,14 @@ clean:
 	rm movedb_inspect
 	rm tkchal
 
-install: bhagchal tkchal.py
-	chmod $(INSTALL_MODE) bhagchal
-	cp -f --preserve=mode bhagchal $(PREFIX)/bin
+install: baghchal tkchal.py
+	chmod $(INSTALL_MODE) baghchal
+	cp -f --preserve=mode baghchal $(PREFIX)/bin
 	cp tkchal.py tkchal
 	chmod $(INSTALL_MODE) tkchal
 	cp -f --preserve=mode tkchal $(PREFIX)/bin
 
-bhagchal: bhagchal.c bhagchal.h movedb.h movedb.o
+baghchal: baghchal.c baghchal.h movedb.h movedb.o
 
 movedb_inspect: movedb_inspect.c movedb.h movedb.o
 

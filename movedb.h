@@ -2,7 +2,7 @@
 #ifndef BHAGCHAL_MOVEDB_H
 #define BHAGCHAL_MOVEDB_H
 
-#include "bhagchal.h"
+#include "baghchal.h"
 #include <stdint.h>
 
 struct movedb_entry {

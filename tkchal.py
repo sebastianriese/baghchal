@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 """
-A graphical user interface for the bhag chal board game
+A graphical user interface for the bagh chal board game
 written in python with tkinter
 """
 
@@ -27,7 +27,7 @@ class Board:
     EMPTY=None
     TIGER=0
     SHEEP=1
-    
+
     TURN_UNDEF=None
     TURN_TIGER=0
     TURN_SHEEP=1
@@ -178,7 +178,7 @@ class Game:
                 self.canvas.bind('<ButtonPress-1>', self.move_tiger)
                 self.canvas.bind('<ButtonRelease-1>', self.move_tiger2)
 
-        
+
         tr = self.tiger_radius
         sr = self.sheep_radius
         for entry, (y, x) in zip(self.board.data, itertools.product(self.board_grid_x, self.board_grid_y)):
@@ -199,7 +199,7 @@ class Game:
                 self.game.stdin.write(bytes(str(k) + '\n', encoding='US-ASCII'))
                 break
             k += 1
-        
+
         if k == len(self.moves):
             self.statustext.set('Invalid move')
         else:
@@ -219,7 +219,7 @@ class Game:
             raise Exception()
 
         return ri, rj
-                
+
 
     def move_sheep(self, ev):
         i, j = self.canvas_to_logical(ev.x, ev.y)
@@ -232,7 +232,7 @@ class Game:
             i, j = self.canvas_to_logical(ev.x, ev.y)
             self.mymove.data[j * 5 + i] = Board.SHEEP
             self.apply_move(self.mymove)
-        
+
 
     def move_tiger(self, ev):
         i, j = self.canvas_to_logical(ev.x, ev.y)
@@ -318,14 +318,14 @@ class Game:
                     cur += tmp
 
     def new(self):
-        cmdline = ['bhagchal']
+        cmdline = ['baghchal']
         self.config = configparser.SafeConfigParser()
         self.config.add_section('game')
         self.config.add_section('engine')
         self.config.read(os.path.expanduser('~/.tkchal'))
 
         if self.config.has_option('engine', 'path'):
-            cmdline[0] = os.path.expanduser(self.config.get('engine', 'path'))    
+            cmdline[0] = os.path.expanduser(self.config.get('engine', 'path'))
 
 
         if os.getenv('BHAGCHAL') is not None:
@@ -381,7 +381,7 @@ def configure():
 
     sheep = tkinter.Radiobutton(conftoplevel, text='Sheep', variable=aivar, value='sheep')
     tiger = tkinter.Radiobutton(conftoplevel, text='Tiger', variable=aivar, value='tiger')
-    
+
     sheep.pack()
     tiger.pack()
 
@@ -413,8 +413,8 @@ def configure():
 
 def about():
     abouttext = """\
-This is the graphical frontend for the bhagchal
-bhagchal engine."""
+This is the graphical frontend for the baghchal
+baghchal engine."""
     toplevel = tkinter.Toplevel(tk)
     tkinter.Label(toplevel, text=abouttext, justify=LEFT).pack()
 
@@ -423,7 +423,7 @@ def rules():
     webbrowser.open("https://en.wikipedia.org/wiki/Bagh_Chal")
 
 tk = tkinter.Tk()
-tk.title('Bhag Chal')
+tk.title('Bagh-Chal')
 
 frame = tkinter.Frame(tk)
 frame.pack(fill=BOTH, expand=1)

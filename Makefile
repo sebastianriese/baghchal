@@ -2,26 +2,30 @@ CC=gcc
 CFLAGS=-Wall -O3 -std=c99
 LIBS=-lm
 LDFLAGS=$(LIBS)
+
+OBJECTS=movedb.o
+
 PREFIX=~/.local
 INSTALL_MODE=0555
+INSTALL_BIN=tkchal baghchal
 
 all: baghchal
 
 clean:
+	@# TODO: check for existence!
+	rm $(OBJECTS)
 	rm baghchal
-	rm movedb.o
 	rm movedb_inspect
 	rm tkchal
 
-install: baghchal tkchal.py
-	chmod $(INSTALL_MODE) baghchal
-	cp -f --preserve=mode baghchal $(PREFIX)/bin
-	cp tkchal.py tkchal
-	chmod $(INSTALL_MODE) tkchal
-	cp -f --preserve=mode tkchal $(PREFIX)/bin
+install: $(INSTALL_BIN)
+	install -t $(PREFIX)/bin -m $(INSTALL_MODE) $(INSTALL_BIN)
 
-baghchal: baghchal.c baghchal.h movedb.h movedb.o
+tkchal: tkchal.py
+	cp -f tkchal.py tkchal
 
-movedb_inspect: movedb_inspect.c movedb.h movedb.o
+baghchal: baghchal.c baghchal.h $(OBJECTS)
+
+movedb_inspect: movedb_inspect.c $(OBJECTS)
 
 movedb.o : movedb.h movedb.c

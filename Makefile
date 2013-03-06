@@ -3,7 +3,7 @@ CFLAGS=-Wall -O3 -std=c99
 LIBS=-lm
 LDFLAGS=$(LIBS)
 
-OBJECTS=movedb.o
+OBJECTS=movedb.o normalize.o
 
 PREFIX=~/.local
 INSTALL_MODE=0555
@@ -28,4 +28,6 @@ baghchal: baghchal.c baghchal.h $(OBJECTS)
 
 movedb_inspect: movedb_inspect.c $(OBJECTS)
 
-movedb.o : movedb.h movedb.c
+movedb.o : movedb.h movedb.c normalize.o
+
+normalize.o : normalize.h normalize.c

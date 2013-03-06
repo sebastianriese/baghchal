@@ -26,7 +26,6 @@ struct movedb {
 };
 typedef struct movedb movedb;
 
-state normalize(state st);
 // for the hashtable
 uint64_t hash(state st);
 

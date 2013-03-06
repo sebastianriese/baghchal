@@ -25,7 +25,7 @@
  * SOFTWARE.
  */
 
-#include "bhagchal.h"
+#include "baghchal.h"
 #include "movedb.h"
 
 #include <assert.h>
@@ -33,10 +33,12 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
+#include <limits.h>
 
 #include <time.h>
 
 int rule_forbid_repetition = 0;
+int pruning = 1;
 movedb *move_db = NULL;
 int winner = -1;
 
@@ -321,7 +323,9 @@ void write_board(state st, FILE *to) {
 // searching on if for example winning is probable) would increasy the strength
 // notably
 
-int movedb_compare(movedb_entry *e1, movedb_entry *e2) {
+int
+movedb_compare(movedb_entry *e1, movedb_entry *e2)
+{
   if (e1 == NULL) {
     if (e2 == NULL) {
       return 0;
@@ -338,10 +342,14 @@ int movedb_compare(movedb_entry *e1, movedb_entry *e2) {
 }
 
 // minimax move selector
-state ai_move_rec(state cur, state *space, int *score, int depth, int tiger, int *moves, int nprev, state *prev) {
+state
+ai_move_rec(state cur, state *space, int *score, int *tiger_max,
+            int *sheep_max, int depth, int tiger, int *moves,
+            int nprev, state *prev)
+{
   if (depth == 0) {
-    // fprintf(stderr, "SHEEP %d\n", hamming(states[0].sheep));
     int blocked = blocked_tigers(cur);
+    // fprintf(stderr, "SHEEP %d\n", hamming(states[0].sheep));
     if (blocked == 4) {
       *score = MAXSCORE; // if we win nothing else matters, so a win gets max score
     } else {
@@ -360,10 +368,13 @@ state ai_move_rec(state cur, state *space, int *score, int depth, int tiger, int
     int k = genmoves(nprev, prev, space);
     *moves += k;
     for (int i = 0; i < k; i++) {
-      int tmp;
+      int tmp,
+          tmp_tiger_max = tiger ? *score : *tiger_max,
+          tmp_sheep_max = tiger ? *sheep_max : *score;
 
       prev[nprev] = space[i];
-      ai_move_rec(space[i], &space[k], &tmp, depth - 1, !tiger, moves,  nprev + 1, prev);
+      ai_move_rec(space[i], &space[k], &tmp, &tmp_tiger_max, &tmp_sheep_max,
+                  depth - 1, !tiger, moves,  nprev + 1, prev);
 
       if (move_db != NULL && tmp == *score) {
         movedb_entry *mdbe = lookup(move_db, space[i]);
@@ -381,10 +392,23 @@ state ai_move_rec(state cur, state *space, int *score, int depth, int tiger, int
           best_movedb = lookup(move_db, space[i]);
         }
       }
+
+      if (pruning) {
+      if (tiger) {
+        *tiger_max = min(*tiger_max, tmp_tiger_max);
+        if (*tiger_max <= *sheep_max)
+            break;
+      } else {
+        *sheep_max = max(*sheep_max, tmp_sheep_max);
+        if (*tiger_max <= *sheep_max)
+            break;
+      }
+      }
     }
     // free(nstates);
     if (k == 0) {
-      return cur; // there is no possible move, so the new state can only be the old state
+      // there is no possible move, so the new state can only be the old state
+      return cur;
     }
 
     return space[best];
@@ -404,28 +428,17 @@ int npow(int base, int exponent) {
   return res;
 }
 
-state ai_move(state st, int strength, int limit,  int nprev, state *prev) {
+state ai_move(state st, int depth, int limit, int nprev, state *prev) {
   int score; // dummy
-  state foo[64];
-
-  // calculate depth to use from strength and the number of currently
-  // possible moves ... account for the sheep/tiger assymmetry by
-  // calculating the possible moves for both from this board
-  int n_sheep = genmoves_sheep(nprev, prev, foo);
-  int n_tiger = genmoves_tiger(nprev, prev, foo);
-
-  /* int depth = (int)(log(strength * 10000) / log(10 * n_sheep + 10) + log(strength * 10000) / log(10 * n_tiger + 10)); */
-  int depth = strength;
-  while (npow((n_sheep + n_tiger) / 2 + 2, depth) < 400*npow(strength,3)) {
-    depth += 1;
-  }
-  printf("depth: %d\n", depth);
+  int tiger_max = INT_MAX;
+  int sheep_max = INT_MIN;
 
   state *states = (state *) malloc(sizeof(state) * 64 * (depth + 4));
   state *myprev = (state *) malloc(sizeof(state) * (nprev + depth + 4));
   memcpy(myprev, prev, sizeof(state) * nprev);
   int moves = 0;
-  state res = ai_move_rec(st, states, &score, depth, st.turn == TURN_TIGER, &moves, nprev, myprev);
+  state res = ai_move_rec(st, states, &score, &tiger_max, &sheep_max,
+                          depth, st.turn == TURN_TIGER, &moves, nprev, myprev);
   free(states);
   free(myprev);
 
@@ -632,7 +645,9 @@ void help() {
   "RULE MODIFICATIONS\n"
   "-r    -- forbid repetition of constellations (slows the ai)\n"
   "MISC OPTIONS\n"
-  "-h    -- print this help and exit\n", stdout);
+  "-h    -- print this help and exit\n"
+  "-P    -- disable alpha-beta-pruning (for verifying its correctness\n",
+  stdout);
 }
 
 int main(int argc, char *argv[]) {
@@ -684,6 +699,9 @@ int main(int argc, char *argv[]) {
 	case 's':
 	  ais = 1;
 	  break;
+        case 'P':
+          pruning = 0;
+          break;
 	default:
 	  fputs("Unknown option!\n", stderr);
 	  usage();

@@ -86,7 +86,7 @@ static const uint8_t CONNECTIONS[25] = {
 };
 
 // the relative index of the next field, indexed by the
-// number of the bit, which encodes this direction in 
+// number of the bit, which encodes this direction in
 // the CONNECTIONS array
 static const int8_t SHIFT[8] = {-1, 4, 5, 6, 1, -4, -5, -6};
 

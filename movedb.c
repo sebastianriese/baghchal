@@ -98,6 +98,7 @@ movedb *mmap_movedb(const char *filename) {
   // rationale: faster starup time, less
   // RAM usage facilitating the use of a
   // vast move db (especially on 64 bit machines)
+  // problem: extension will be difficult
   return NULL;
 }
 

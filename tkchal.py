@@ -1,6 +1,27 @@
 #!/usr/bin/python3
+
+# Copyright 2012 Sebastian Riese
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
 """
-A graphical user interface for the bhag chal board game
+A graphical user interface for the bagh chal board game
 written in python with tkinter
 """
 
@@ -337,7 +358,7 @@ class Game:
                     cur += tmp
 
     def new(self):
-        cmdline = ['bhagchal']
+        cmdline = ['baghchal']
         self.config = configparser.SafeConfigParser()
         self.config.add_section('game')
         self.config.add_section('engine')
@@ -435,8 +456,8 @@ def configure():
 
 def about():
     abouttext = """\
-This is the graphical frontend for the bhagchal
-bhagchal engine."""
+This is the graphical frontend for the baghchal
+baghchal engine."""
     toplevel = tkinter.Toplevel(tk)
     tkinter.Label(toplevel, text=abouttext, justify=LEFT).pack()
 
@@ -445,7 +466,7 @@ def rules():
     webbrowser.open("https://en.wikipedia.org/wiki/Bagh_Chal")
 
 tk = tkinter.Tk()
-tk.title('Bhag Chal')
+tk.title('Bagh-Chal')
 
 frame = tkinter.Frame(tk)
 frame.pack(fill=BOTH, expand=1)

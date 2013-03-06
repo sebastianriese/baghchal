@@ -7,7 +7,7 @@
 // strength parameters for the AI
 // twiddle around with these, but be warned
 // they may turn the game indefinitley slow
-#define AI_DEPTH_DEFAULT 5
+#define AI_DEPTH_DEFAULT 2
 #define RECURSE_LIMIT_SHEEP 5000
 #define RECURSE_LIMIT_TIGER 1000
 #define RECURSE_INC 2
@@ -28,7 +28,7 @@ typedef struct state state;
 #define TURN_TIGER 1
 
 // initial board
-const state START = {
+static const state START = {
   0, // no sheep
   0x1100011, // the four tigers in the corners
   0, // no sheep set
@@ -36,22 +36,22 @@ const state START = {
 };
 
 // constants for moves
-const uint64_t MAXSHEEP = 20;
-const uint64_t BOARDLEN = 5;
-const uint64_t BOARDPLACES = 25;
+static const uint64_t MAXSHEEP = 20;
+static const uint64_t BOARDLEN = 5;
+static const uint64_t BOARDPLACES = 25;
 
 // AI calibration
-const int SHEEPWEIGHT = 131;
-const int TRAPPEDWEIGHT = 26;
-const int LOCKEDWEIGHT = 1;
-const int MAXSCORE = 2749; // XXX: update according to SHEEPWEIGHT * MAXSHEEP + TRAPPEDWEIGHT * 4 + LOCKEDWEIGHT * 25 + 1
+static const int SHEEPWEIGHT = 131;
+static const int TRAPPEDWEIGHT = 26;
+static const int LOCKEDWEIGHT = 1;
+static const int MAXSCORE = 2749; // XXX: update according to SHEEPWEIGHT * MAXSHEEP + TRAPPEDWEIGHT * 4 + LOCKEDWEIGHT * 25 + 1
 
 // board connections - each byte contains the possible moves
 // by (-1,-1), (-1,0), (-1,1), ..
 // perhaps one day the move generation code could exploit symmetries
 // that I don't see right now to use mainly bitwise operations on the entire word
 // or be created from the data
-const uint8_t CONNECTIONS[25] = {
+static const uint8_t CONNECTIONS[25] = {
   0x1c, 0x15, 0x1f, 0x15, 0x07,
   0x54, 0xff, 0x55, 0xff, 0x45,
   0x7c, 0x55, 0xff, 0x55, 0xc7,
@@ -62,7 +62,7 @@ const uint8_t CONNECTIONS[25] = {
 // the relative index of the next field, indexed by the
 // number of the bit, which encodes this direction in 
 // the CONNECTIONS array
-const int8_t SHIFT[8] = {-1, 4, 5, 6, 1, -4, -5, -6};
+static const int8_t SHIFT[8] = {-1, 4, 5, 6, 1, -4, -5, -6};
 
 // querying the board
 static inline int sheep_at(state st, int i, int j) {
@@ -76,7 +76,7 @@ static inline int tiger_at(state st, int i, int j) {
 // not optimal, but fast enough for my purposes for now
 // if it gets critical, write a code generator, precalculating
 // the hamming weight of bytes, finally there is always one alternative: magic
-const int HAMMING_NYBBLE[16] = {
+static const int HAMMING_NYBBLE[16] = {
 // 0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
    0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4
 };

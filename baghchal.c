@@ -222,7 +222,7 @@ int locked_fields(state st) {
 
   // where no tiger can go, and no sheep is placed,
   // there must be a locked field ...
-  return hamming(~black.tiger & ~black.sheep);
+  return hamming(~black.tiger & ~black.sheep & 0x1ffffff);
 }
 
 // the caller must ensure, that res is sufficiently large,

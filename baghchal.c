@@ -52,6 +52,8 @@ int pruning = 1;
 movedb *move_db = NULL;
 int winner = -1;
 
+void ui_help();
+
 // return 0 the proposed state occured before
 // return 1 otherwhise
 int check_repetition(state proposed, int nprev, state *prev) {
@@ -598,7 +600,7 @@ void gameloop(FILE *in, FILE *out, int verb, int cm, int ait, int ais, int ai_de
 	 }
 
 	 if (cmd == 'h') {
-	   fputs("Sorry, no help available yet\n", out);
+           ui_help();
 	   continue;
 	 }
 
@@ -640,6 +642,22 @@ void gameloop(FILE *in, FILE *out, int verb, int cm, int ait, int ais, int ai_de
        }
      }
   }
+}
+
+void ui_help() {
+    fputs("The interface knows the following commands: \n"
+          "q      -- quit the program\n"
+          "h      -- print this help\n"
+          "u      -- undo previous move\n"
+          "number -- apply possible move with the number as given in the\n"
+          "          list of possible moves\n"
+          "Above the board is a status code:\n"
+          "S      -- sheep set in\n"
+          "s      -- sheep move\n"
+          "T      -- tigers move\n"
+          "D      -- tigers have won\n"
+          "Z      -- sheep have won\n",
+          stdout);
 }
 
 void usage() {

@@ -236,6 +236,7 @@ class Game:
         for move in self.moves:
             if move.data == mymove.data:
                 self.game.stdin.write(bytes(str(k) + '\n', encoding='US-ASCII'))
+                self.game.stdin.flush()
                 break
             k += 1
 
@@ -397,6 +398,7 @@ class Game:
 
     def undo(self):
         self.game.stdin.write(b'u\n')
+        self.game.stdin.flush()
         self.get_board()
         self.get_moves()
         self.draw()

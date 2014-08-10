@@ -367,7 +367,6 @@ class Game:
         if self.config.has_option('engine', 'path'):
             cmdline[0] = os.path.expanduser(self.config.get('engine', 'path'))
 
-
         if os.getenv('BHAGCHAL') is not None:
             cmdline[0] = os.path.expanduser(os.getenv('BHAGCHAL'))
 

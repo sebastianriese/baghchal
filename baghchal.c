@@ -596,6 +596,7 @@ void gameloop(FILE *in, FILE *out, int verb, int cm, int ait, int ais, int ai_de
 	   int move;
 	   ungetc(cmd, in);
 	   fscanf(in, "%d", &move);
+
 	   if (move >= nmoves) {
 	     fputs("Invalid turn!\n", out);
 	     continue;
@@ -646,7 +647,7 @@ void help() {
   "-r    -- forbid repetition of constellations (slows the ai)\n"
   "MISC OPTIONS\n"
   "-h    -- print this help and exit\n"
-  "-P    -- disable alpha-beta-pruning (for verifying its correctness\n",
+  "-P    -- disable alpha-beta-pruning (for verifying its correctness)\n",
   stdout);
 }
 

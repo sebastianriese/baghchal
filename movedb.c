@@ -25,6 +25,8 @@
  * SOFTWARE.
  */
 
+#define _POSIX_SOURCE
+
 #include "movedb.h"
 #include "normalize.h"
 

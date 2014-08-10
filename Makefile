@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-Wall -O3 -std=c99
+CFLAGS=-Wall -O3 -std=c99 -DBAGHCHAL_WITH_COLOUR
 LIBS=-lm
 LDFLAGS=$(LIBS)
 

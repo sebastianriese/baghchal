@@ -37,6 +37,15 @@
 
 #include <time.h>
 
+#ifdef BAGHCHAL_WITH_COLOUR
+#include <unistd.h>
+
+#define COLOUR_SHEEP "\033[01;32m"
+#define COLOUR_TIGER "\033[01;31m"
+#define COLOUR_RESET "\033[0m"
+int term_colour = 0;
+#endif
+
 int rule_forbid_repetition = 0;
 int pruning = 1;
 movedb *move_db = NULL;
@@ -258,13 +267,27 @@ void draw_board(state st, FILE *to) {
 	fputs("---", to);
       }
 
-      if (sheep_at(st, i, j)) {
-	fputs("S", to);
-      } else if (tiger_at(st, i, j)) {
-	fputs("T", to);
+#ifdef BAGHCHAL_WITH_COLOUR
+      if (term_colour) {
+        if (sheep_at(st, i, j)) {
+          fputs(COLOUR_SHEEP "S" COLOUR_RESET, to);
+        } else if (tiger_at(st, i, j)) {
+          fputs(COLOUR_TIGER "T" COLOUR_RESET, to);
+        } else {
+          fputs("o", to);
+        }
       } else {
-	fputs("o", to);
+#endif
+        if (sheep_at(st, i, j)) {
+          fputs("S", to);
+        } else if (tiger_at(st, i, j)) {
+          fputs("T", to);
+        } else {
+          fputs("o", to);
+        }
+#ifdef BAGHCHAL_WITH_COLOUR
       }
+#endif
     }
     fputs("\n", to);
   }
@@ -723,6 +746,12 @@ int main(int argc, char *argv[]) {
     strcat(strcpy(bcmoves, getenv("HOME")), "/.bcmoves");
     move_db = load_movedb(bcmoves);
   }
+
+#ifdef BAGHCHAL_WITH_COLOUR
+  if (isatty(fileno(stdout))) {
+    term_colour = 1;
+  }
+#endif
 
   cap = 128;
   turn = 1;

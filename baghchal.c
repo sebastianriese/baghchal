@@ -373,14 +373,21 @@ ai_move_rec(state cur, state *space, int *score, int *tiger_max,
             int *sheep_max, int depth, int tiger, int *moves,
             int nprev, state *prev)
 {
+
   if (depth == 0) {
     int blocked = blocked_tigers(cur);
-    // fprintf(stderr, "SHEEP %d\n", hamming(states[0].sheep));
+    int eaten_sheep = cur.setsheep - hamming(cur.sheep);
     if (blocked == 4) {
-      *score = MAXSCORE; // if we win nothing else matters, so a win gets max score
-    } else {
-      *score = SHEEPWEIGHT * hamming(cur.sheep) + TRAPPEDWEIGHT * blocked + LOCKEDWEIGHT * locked_fields(cur);
+      *score = MAXSCORE;
+      return cur;
+    } else if (eaten_sheep >= 5) {
+      *score = 0;
+      return cur;
     }
+
+    *score = SHEEPWEIGHT * hamming(cur.sheep)
+        + TRAPPEDWEIGHT * blocked
+        + LOCKEDWEIGHT * locked_fields(cur);
     return cur;
   } else {
     int best = 0;

@@ -742,9 +742,9 @@ int main(int argc, char *argv[]) {
   }
 
   if (use_moves) {
-    // XXX do proper error checking
-    char bcmoves[1024];
+    char bcmoves[strlen(getenv("HOME")) + strlen("/.bcmoves") + 1];
     strcat(strcpy(bcmoves, getenv("HOME")), "/.bcmoves");
+    bcmoves[sizeof(bcmoves) - 1] = '\0';
     move_db = load_movedb(bcmoves);
   }
 

@@ -654,7 +654,7 @@ void help() {
   usage();
   version();
   fputs(
-  "written by Sebastian Riese <sebastian.riese.mail@web.de>\n"
+  "written by Sebastian Riese <sebi@zombofant.net>\n"
   "This is a the Bagh-Chal board game.\n"
   "The interface is crappy currently, but there\n"
   "is a simple Python/Tk frontend available called tkchal\n"

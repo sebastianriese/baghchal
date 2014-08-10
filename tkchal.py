@@ -177,7 +177,7 @@ class Game:
             self.canvas.create_line(board_min_x, y, board_max_x, y)
 
         self.canvas.create_line(board_min_x, board_min_y,
-                                board_max_x, board_max_y)
+                                board_max_x+1, board_max_y+1)
         self.canvas.create_line(board_min_x, board_max_y,
                                 board_max_x, board_min_y)
 
